@@ -28,7 +28,7 @@ function Account() {
 
     const uploaded = await uploadAvatar(authData.user.profile.id, uploadData);
     if(uploaded){
-      NotificationManager.success("Image uplaoded");
+      NotificationManager.success("Image uploaded");
     } else {
       NotificationManager.error("Error. Image was no uploaded");
     }

@@ -5,7 +5,7 @@ import { useFetchGroup } from '../../hooks/fetch-group';
 import { makeStyles } from '@material-ui/core/styles';
 import User from '../user/user';
 import { Button } from '@material-ui/core';
-import { joinGroup, leaveGroup } from '../../services/group-services';
+import { joinGroup, leaveGroup, createGroup } from '../../services/group-services';
 import { useAuth } from '../../hooks/useAuth';
 import Comments from '../comments/comments';
 import EventList from '../events/event-list';
@@ -93,6 +93,7 @@ function GroupDetails() {
     if (error) return <h1>Error</h1>
     if (loading) return <h1>Loading....</h1>
 
+    const adminMemberName = data.members.find(member => member.admin)?.user.name;
 
     return (
         <div>
@@ -101,6 +102,10 @@ function GroupDetails() {
             <React.Fragment>
                 <h1>{group.name} {group.location}</h1>
                 <h2>{group.description}</h2>
+                <h2> {adminMemberName} created this group on {group.time} </h2>
+
+                <Link to={'/forecasting/group-form'}>Create Group</Link>
+
                 { isGroup ?
                     <Button onClick={()=> leaveHere()} variant="contained"
                             color="primary">Leave Group</Button>
@@ -108,6 +113,7 @@ function GroupDetails() {
                     <Button onClick={()=> joinHere()} variant="contained"
                             color="primary">Join Group</Button>
                 }
+
                 {isAdmin && <Button onClick={()=> addEvent()} variant="contained"
                                     color="primary">Add new Event</Button>}
 

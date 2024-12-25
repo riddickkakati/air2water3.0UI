@@ -19,12 +19,16 @@ function Sidebar() {
     e.preventDefault();
     const data = await auth({username, password});
     setAuth(data);
+    history.push('/')
   }
   const logout = () => {
     setAuth(null);
   }
   const account = () => {
     history.push('/account')
+  }
+  const home = () => {
+    history.push('/')
   }
 
   return (
@@ -59,11 +63,12 @@ function Sidebar() {
           <br/>
           
         </form>
-        <Link to={'/register'}>Register here if you don't have an account yet</Link>
         </div>
       :
           <div>
-            <User user={authData.user}/>
+            <div onClick={() => home()} style={{ cursor: 'pointer' }}>
+                <User user={authData.user}/>
+              </div>
             <br/>
             <br/>
             <Button color="primary" variant="contained" onClick={()=> logout()}>
@@ -72,8 +77,7 @@ function Sidebar() {
             <Button color="primary" variant="contained" onClick={()=> account()}>
               My Account
             </Button>
-          </div>
-        
+          </div>      
       }
     </div>
   );

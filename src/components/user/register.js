@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { Link, useHistory } from 'react-router-dom';
+import {useHistory } from 'react-router-dom';
 import { Button, Grid, TextField } from '@material-ui/core';
 import AccountCircleIcon from '@material-ui/icons/AccountCircle';
 import VpnKeyIcon from '@material-ui/icons/VpnKey';
@@ -29,7 +29,7 @@ function Register() {
       if(regData){
         const data = await auth({username, password});
         setAuth(data);
-        history.push('/account')
+        history.push('/')
       }
     } else {
       console.log('pass dont match');
@@ -38,7 +38,6 @@ function Register() {
 
   return (
     <div>
-       <Link to={'/'}>Back</Link>
       <h1>Register</h1>
       <form onSubmit={handleSubmit}>
           <Grid container spacing={1} alignItems="flex-end">

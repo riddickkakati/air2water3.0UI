@@ -10,14 +10,14 @@ export function getGroup(id){
   .then(status).catch( e => {console.log(e)})
 }
 
-export function CreateGroup(token, name, location, description){
+export function createGroup(userData, token){
   return fetch(`http://127.0.0.1:8000/forecasting/groups/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Token ${token}`
     },
-    body: JSON.stringify({name, location, description})
+    body: JSON.stringify({userData})
   })
   .then(status).catch( e => {console.log(e)})
 }
