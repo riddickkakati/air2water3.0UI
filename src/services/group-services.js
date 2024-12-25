@@ -10,16 +10,17 @@ export function getGroup(id){
   .then(status).catch( e => {console.log(e)})
 }
 
-export function createGroup(userData, token){
+export function createGroup(token, userData){
   return fetch(`http://127.0.0.1:8000/forecasting/groups/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Token ${token}`
-    },
-    body: JSON.stringify({userData})
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`
+      },
+      body: JSON.stringify(userData)  // Remove the extra {} wrapping
   })
-  .then(status).catch( e => {console.log(e)})
+  .then(status)
+  .catch(e => {console.log(e)})
 }
 
 export function joinGroup(data){

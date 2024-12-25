@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../hooks/useAuth';
 import { Link, useHistory } from 'react-router-dom';
 import { Button, Grid, TextField } from '@material-ui/core';
 import AccountCircleIcon from '@material-ui/icons/AccountCircle';
 import VpnKeyIcon from '@material-ui/icons/VpnKey';
 import EmailIcon from '@material-ui/icons/Email';
 import { createGroup } from '../../services/group-services';
-import { auth } from '../../services/user-services';
+import { useAuth } from '../../hooks/useAuth';
 
 function MakeGroup() {
-    const { setAuth } = useAuth();
+    const { authData } = useAuth();
     const history = useHistory();
     const [name, setName] = useState('');
     const [location, setLocation] = useState('');
@@ -17,8 +16,16 @@ function MakeGroup() {
 
     const handleSubmit = async e => {
         e.preventDefault();
-        const regData = await createGroup({ name, location, description });
-        history.push('/forecasting');
+        try {
+            const dataToSend = {name, location, description};
+            const regData = await createGroup(authData.token, dataToSend);
+            if (regData) {
+                history.push('/forecasting');
+            }
+        } catch (error) {
+            console.error('Error creating group:', error);
+            // Add user feedback here if needed
+        }
     };
 
     return (
