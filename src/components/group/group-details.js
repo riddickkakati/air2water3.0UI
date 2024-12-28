@@ -93,7 +93,6 @@ function GroupDetails() {
     if (error) return <h1>Error</h1>
     if (loading) return <h1>Loading....</h1>
 
-    const adminMemberName = group?.forecasting_members?.find(member => member.admin)?.user.name;
 
     return (
         <div>
@@ -102,7 +101,11 @@ function GroupDetails() {
             <React.Fragment>
                 <h1>{group.name} {group.location}</h1>
                 <h2>{group.description}</h2>
-                <h2> {adminMemberName} created this group on {group.time} </h2>
+                <h2>
+  {group.forecasting_members &&
+    group.forecasting_members
+      .find(member => member.admin)?.user.username || 'No Admin'} created this group on {group.time}
+</h2>
 
                 <Link to={'/forecasting/group-form'}>Create Group</Link>
 
@@ -126,8 +129,7 @@ function GroupDetails() {
 
                     return <div key={member.id} className={classes.memberContainer}>
                         <User user={member.user}/>
-                        <p><EmojiEventsIcon className={`${classes[member.trophy]}`}/></p>
-                        <p>{member.points}pts</p>
+                        <p>{member.time}</p>
                     </div>
                 })}
 

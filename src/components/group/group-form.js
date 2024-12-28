@@ -4,7 +4,7 @@ import { Button, Grid, TextField } from '@material-ui/core';
 import AccountCircleIcon from '@material-ui/icons/AccountCircle';
 import VpnKeyIcon from '@material-ui/icons/VpnKey';
 import EmailIcon from '@material-ui/icons/Email';
-import { createGroup } from '../../services/group-services';
+import { createGroup, joinGroup } from '../../services/group-services';
 import { useAuth } from '../../hooks/useAuth';
 
 function MakeGroup() {
@@ -20,6 +20,7 @@ function MakeGroup() {
             const dataToSend = {name, location, description};
             const regData = await createGroup(authData.token, dataToSend);
             if (regData) {
+                const joinGrp = await joinGroup({user: authData.user.id, group: regData.id, admin: true});
                 history.push('/forecasting');
             }
         } catch (error) {
