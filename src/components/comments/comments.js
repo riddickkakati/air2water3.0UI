@@ -10,13 +10,13 @@ function Comments({group}) {
   const [ newComment, setNewComment] = useState('');
 
   const getUser = userId => {
-    return group.members.find(member => member.user.id === userId).user;
+    return group.forecasting_members.find(member => member.user.id === userId).user;
   }
   const sendComment = () => {
     postComment(authData.token, newComment, group.id, authData.user.id)
       .then( resp => {
         setNewComment('');
-        group.comments.unshift(resp);
+        group.forecasting_comments.unshift(resp);
       })
   }
 
@@ -40,7 +40,7 @@ function Comments({group}) {
             </Button>
             <br/><br/>
 
-        {group.comments.map( comment => {
+        {group.forecasting_comments.map( comment => {
           return <Comment comment={comment} user={getUser(comment.user)}/>
         })}
     </div>

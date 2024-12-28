@@ -93,11 +93,11 @@ function GroupDetails() {
     if (error) return <h1>Error</h1>
     if (loading) return <h1>Loading....</h1>
 
-    const adminMemberName = data.members.find(member => member.admin)?.user.name;
+    const adminMemberName = group?.forecasting_members?.find(member => member.admin)?.user.name;
 
     return (
         <div>
-            <Link to={`/`}><ChevronLeftIcon/></Link>
+            <Link to={`/forecasting/`}><ChevronLeftIcon/></Link>
             { group &&
             <React.Fragment>
                 <h1>{group.name} {group.location}</h1>
@@ -122,7 +122,7 @@ function GroupDetails() {
 
                 <br/>
                 <h3>Members:</h3>
-                { group.members.map ( member => {
+                { group.forecasting_members.map ( member => {
 
                     return <div key={member.id} className={classes.memberContainer}>
                         <User user={member.user}/>
@@ -131,7 +131,7 @@ function GroupDetails() {
                     </div>
                 })}
 
-                <Comments group={group}/>
+                {<Comments group={group}/>}
             </React.Fragment>
             }
 

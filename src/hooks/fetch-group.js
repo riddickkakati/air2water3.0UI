@@ -18,5 +18,6 @@ export function useFetchGroup(groupId){
     getData();
   },[groupId]);
 
+
   return [group, loading, error]
 }

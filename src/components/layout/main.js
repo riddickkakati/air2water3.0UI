@@ -41,7 +41,7 @@ function Main() {
               <MakeGroup />
           </Route>
           
-          <Route path="/forecasting/details/:id">
+          <Route path="/forecasting/groups/:id">
               <GroupDetails />
           </Route>
           <Route path="/forecasting/event/:id">
