@@ -14,7 +14,7 @@
 }
 .sidebar {
   background-color: var(--bg-light-color);
-  height: calc(100vh - 150px);
+  min-height: 100vh; /* Ensures it covers at least the full viewport height */
   padding: 1rem;
 }
 .main {

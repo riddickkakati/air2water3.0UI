@@ -1,6 +1,5 @@
 import React, {useState, useEffect} from 'react';
 import { Link, useParams, useHistory } from 'react-router-dom';
-import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import { useFetchGroup } from '../../hooks/fetch-group';
 import { makeStyles } from '@material-ui/core/styles';
 import User from '../user/user';
@@ -47,17 +46,17 @@ function GroupDetails() {
     const history = useHistory();
 
     useEffect(()=>{
-        if(data?.members){
+        if(data?.forecasting_members){
             
-            data.members.sort((a,b) => b.points - a.points);
+            data.forecasting_members.sort((a,b) => b.points - a.points);
 
             const availableTrophies = ['gold', 'silver', 'bronze'];
             let currentTrophy = 0;
-            data.members.map( (m, indx) => {
+            data.forecasting_members.map( (m, indx) => {
                 if(indx === 0){
                     m.trophy = availableTrophies[currentTrophy];
                 } else {
-                    if(m.points !== data.members[indx -1].points){
+                    if(m.points !== data.forecasting_members[indx -1].points){
                         currentTrophy++;
                     }
                     if(currentTrophy < availableTrophies.length){
@@ -67,8 +66,8 @@ function GroupDetails() {
             })
 
             if(authData?.user) {
-                setInGroup(!!data.members.find( member => member.user.id === authData.user.id));
-                setIsAdmin(data.members.find( member => member.user.id === authData.user.id)?.admin);
+                setInGroup(!!data.forecasting_members.find( member => member.user.id === authData.user.id));
+                setIsAdmin(data.forecasting_members.find( member => member.user.id === authData.user.id)?.admin);
             }
         }
         setGroup(data);
@@ -96,7 +95,6 @@ function GroupDetails() {
 
     return (
         <div>
-            <Link to={`/forecasting/`}><ChevronLeftIcon/></Link>
             { group &&
             <React.Fragment>
                 <h1>{group.name} {group.location}</h1>
