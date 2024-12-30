@@ -1,23 +1,30 @@
-import {useState, useEffect} from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getGroup } from '../services/group-services';
 
-export function useFetchGroup(groupId){
+export function useFetchGroup(groupId) {
+    const [group, setGroup] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
 
-  const [ group, setGroup] = useState(null);
-  const [ loading, setLoading] = useState(false);
-  const [ error, setError] = useState(false);
+    // Create a memoized fetch function that can be called on demand
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const data = await getGroup(groupId);
+            setGroup(data);
+            setError(null);
+        } catch (err) {
+            setError(err);
+        } finally {
+            setLoading(false);
+        }
+    }, [groupId]);
 
-  useEffect(()=>{
-    const getData = async () => {
-      setLoading(true);
-      const data = await getGroup(groupId);
-      setGroup(data);
-      setLoading(false);
-      setError(null);
-    }
-    getData();
-  },[groupId]);
+    // Initial fetch on mount and groupId change
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
-
-  return [group, loading, error]
+    // Return fetchData as the fourth element in the array
+    return [group, loading, error, fetchData];
 }

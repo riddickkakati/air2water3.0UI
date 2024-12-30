@@ -31,7 +31,7 @@ function GroupList() {
     <div>
         { groups && groups.map(group => {
           return <Link key={group.id} to={`/forecasting/groups/${group.id}`}>
-              <p>{group.name}: {group.location}</p>
+              <p> {group.name} from {group.location} : {group.description} </p>
             </Link>
         })}
     </div>

@@ -35,19 +35,17 @@ const useStyles = makeStyles( theme => ({
 }));
 
 function GroupDetails() {
-
     const classes = useStyles();
     const { authData } = useAuth();
     const { id } = useParams();
-    const [ data, loading, error ] = useFetchGroup(id);
+    const [ data, loading, error, refetch ] = useFetchGroup(id);  // Add refetch to the hook return
     const [ group, setGroup] = useState(null);
     const [ isGroup, setInGroup ] = useState(false);
     const [ isAdmin, setIsAdmin] = useState(false);
     const history = useHistory();
-
+    
     useEffect(()=>{
         if(data?.forecasting_members){
-            
             data.forecasting_members.sort((a,b) => b.points - a.points);
 
             const availableTrophies = ['gold', 'silver', 'bronze'];
@@ -63,7 +61,7 @@ function GroupDetails() {
                         m.trophy = availableTrophies[currentTrophy];
                     }
                 }
-            })
+            });
 
             if(authData?.user) {
                 setInGroup(!!data.forecasting_members.find( member => member.user.id === authData.user.id));
@@ -71,19 +69,25 @@ function GroupDetails() {
             }
         }
         setGroup(data);
-    }, [data])
-
-    const joinHere = () => {
-        joinGroup({user: authData.user.id, group: group.id}).then(
-            res => { console.log(res)}
-        )
-    }
-
-    const leaveHere = () => {
-        leaveGroup({user: authData.user.id, group: group.id}).then(
-            res => { console.log(res)}
-        )
-    }
+    }, [data, authData]);
+    
+        const joinHere = () => {
+            joinGroup({user: authData.user.id, group: group.id}).then(
+                res => { 
+                    console.log(res);
+                    refetch();  // Refetch group data after joining
+                }
+            );
+        };
+    
+        const leaveHere = () => {
+            leaveGroup({user: authData.user.id, group: group.id}).then(
+                res => { 
+                    console.log(res);
+                    refetch();  // Refetch group data after leaving
+                }
+            );
+        };
 
     const addEvent = () => {
         history.push('/event-form', {group})
@@ -115,7 +119,7 @@ function GroupDetails() {
                             color="primary">Join Group</Button>
                 }
 
-                {isAdmin && <Button onClick={()=> addEvent()} variant="contained"
+                { isGroup && <Button onClick={()=> addEvent()} variant="contained"
                                     color="primary">Add new Event</Button>}
 
 
@@ -130,8 +134,8 @@ function GroupDetails() {
                         <p>{member.time}</p>
                     </div>
                 })}
-
-                {<Comments group={group}/>}
+                
+                {isGroup && <Comments group={group}/>}
             </React.Fragment>
             }
 
