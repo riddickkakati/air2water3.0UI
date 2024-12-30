@@ -90,7 +90,7 @@ function GroupDetails() {
         };
 
     const addEvent = () => {
-        history.push('/event-form', {group})
+        history.push('/forecasting/event-form', {group})
     }
 
     if (error) return <h1>Error</h1>
@@ -104,10 +104,10 @@ function GroupDetails() {
                 <h1>{group.name} {group.location}</h1>
                 <h2>{group.description}</h2>
                 <h2>
-  {group.forecasting_members &&
-    group.forecasting_members
-      .find(member => member.admin)?.user.username || 'No Admin'} created this group on {group.time}
-</h2>
+                    {group.forecasting_members &&
+                        group.forecasting_members
+                        .find(member => member.admin)?.user.username || 'No Admin'} created this group on {group.time}
+                    </h2>
 
                 <Link to={'/forecasting/group-form'}>Create Group</Link>
 
