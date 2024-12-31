@@ -1,48 +1,160 @@
-import React from 'react';
-import {DateTime} from 'luxon';
-import CalendarTodayIcon from '@material-ui/icons/CalendarToday';
-import AlarmIcon from '@material-ui/icons/Alarm';
+import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { useHistory } from 'react-router';
+import { Typography, Card, CardContent, Button, LinearProgress, Grid } from '@material-ui/core';
+import { useAuth } from '../../hooks/useAuth';  // Add this import
 
-
-const useStyles = makeStyles( theme => ({
-  dateTime: {
-    fontSize: '18px',
-    marginRight: '3px',
-    marginTop: '10px',
-    color: theme.colors.mainAccentColor
+const useStyles = makeStyles(theme => ({
+  root: {
+    marginTop: theme.spacing(2)
   },
-  memberContainer: {
-    display: 'grid',
-    gridTemplateColumns: '100px auto'
+  simulationCard: {
+    marginBottom: theme.spacing(2)
+  },
+  downloadButton: {
+    margin: theme.spacing(1),
+    width: '100%'
+  },
+  resultsSection: {
+    marginTop: theme.spacing(2)
   }
 }));
 
-export default function EventList({events}){
-
+export default function EventList({ simulations }) {
   const classes = useStyles();
-  const history = useHistory()
+  const { authData } = useAuth();
+  const [simulationResults, setSimulationResults] = useState({});
 
-  const openEvent = eventId => {
-    history.push(`/event/${eventId}`);
-  }
+  useEffect(() => {
+    const fetchSimulationStatus = async (simulationId) => {
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:8000/forecasting/simulations/${simulationId}/check_status/`,
+          {
+            headers: {
+              'Authorization': `Token ${authData.token}`
+            }
+          }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSimulationResults(prev => ({
+            ...prev,
+            [simulationId]: data
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching simulation status:', error);
+      }
+    };
+
+    // Fetch status for each simulation
+    if (simulations?.length > 0) {
+      simulations.forEach(simulation => {
+        fetchSimulationStatus(simulation.id);
+      });
+    }
+  }, [simulations, authData.token]);
 
   return (
-    <React.Fragment>
-    <h3>Events:</h3>
-        { events && events.map( event => {
-          const format = "yyyy-MM-dd'T'HH:mm:ss'Z'";
-          const evtTime = DateTime.fromFormat(event.time, format)
+    <div className={classes.root}>
+      <Typography variant="h5" gutterBottom>
+        Simulations
+      </Typography>
 
-          return <div key={event.id} onClick={()=> openEvent(event.id)}>
-            <p>{event.team1} VS {event.team2}
-              &nbsp; : &nbsp; 
-              <CalendarTodayIcon className={classes.dateTime}/>{evtTime.toSQLDate()} 
-              <AlarmIcon className={classes.dateTime}/>{evtTime.toFormat('HH:mm')}
-            </p>
-          </div>
-        })}
-      </React.Fragment>
-  )
+      {simulations?.map(simulation => {
+        const results = simulationResults[simulation.id];
+        return (
+          <Card key={simulation.id} className={classes.simulationCard}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Simulation #{simulation.id}
+              </Typography>
+
+              {results ? (
+                <Grid container spacing={2}>
+                  {results.plot_path && (
+                    <Grid item xs={12} sm={6}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        className={classes.downloadButton}
+                        href={results.plot_path}
+                        target="_blank"
+                      >
+                        View Model Run Plot
+                      </Button>
+                    </Grid>
+                  )}
+
+                  {results.dotty_plots && (
+                    <Grid item xs={12} sm={6}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        className={classes.downloadButton}
+                        href={results.dotty_plots}
+                        target="_blank"
+                      >
+                        View Dotty Plots
+                      </Button>
+                    </Grid>
+                  )}
+
+                  {results.obj_function_path && (
+                    <Grid item xs={12} sm={6}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        className={classes.downloadButton}
+                        href={results.obj_function_path}
+                        target="_blank"
+                      >
+                        View Objective Function
+                      </Button>
+                    </Grid>
+                  )}
+
+                  {results.parameter_convergence && (
+                    <Grid item xs={12} sm={6}>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        className={classes.downloadButton}
+                        href={results.parameter_convergence}
+                        download
+                      >
+                        Download Parameter Convergence
+                      </Button>
+                    </Grid>
+                  )}
+
+                  {results.timeseries_path && (
+                    <Grid item xs={12} sm={6}>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        className={classes.downloadButton}
+                        href={results.timeseries_path}
+                        download
+                      >
+                        Download Results CSV
+                      </Button>
+                    </Grid>
+                  )}
+                </Grid>
+              ) : (
+                <LinearProgress />
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {(!simulations || simulations.length === 0) && (
+        <Typography variant="body1">
+          No simulations found.
+        </Typography>
+      )}
+    </div>
+  );
 }

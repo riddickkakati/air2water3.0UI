@@ -123,7 +123,7 @@ function GroupDetails() {
                                     color="primary">Add new Event</Button>}
 
 
-                <EventList events={group.events}/>
+                <EventList />
 
                 <br/>
                 <h3>Members:</h3>
