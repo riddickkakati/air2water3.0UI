@@ -4,7 +4,6 @@ import GroupList from '../group/group-list';
 import GroupDetails from '../group/group-details';
 import Register from '../user/register';
 import Account from '../user/account';
-import Event from '../events/event';
 import EventForm from '../events/event-form';
 import { useAuth } from '../../hooks/useAuth';
 import { Link, useHistory } from 'react-router-dom';
@@ -71,9 +70,6 @@ function Main() {
           
           <Route path="/forecasting/groups/:id">
               <GroupDetails />
-          </Route>
-          <Route path="/forecasting/event/:id">
-              <Event />
           </Route>
           <Route path="/forecasting/event-form">
               <EventForm />

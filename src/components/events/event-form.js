@@ -190,65 +190,41 @@ const EventForm = () => {
   };
 
   const handleSubmitSimulation = async () => {
-    if (!groupData) return;
-
-    const simulationData = {
-      user: {
-        id: authData.user.id,
-        username: authData.user.username,
-        email: authData.user.email,
-        profile: authData.user.profile
-      },
-      group: {
-        id: groupData.id,
-        name: groupData.name,
-        location: groupData.location,
-        description: groupData.description
-      },
-      timeseries: {
-        id: timeseriesId,
-        group: groupData.id,
-        user: authData.user.id
-      },
-      interpolate: true,
-      n_data_interpolate: 7,
-      validation_required: true,
-      core: 1,
-      depth: 14.0,
-      compiler: 'C',
-      databaseformat: 'C',
-      computeparameterranges: true,
-      computeparameters: false,
-      model: 'W',
-      mode: selectedMode === 'forward' ? 'F' : 'C',
-      method: 'S',
-      optimizer: selectedMode === 'pso' ? 'P' : 
-                selectedMode === 'latin' ? 'L' : 
-                selectedMode === 'monteCarlo' ? 'M' : null,
-      forward_options: selectedMode === 'forward' ? 
-                      (parameterUploadType === 'upload' ? 'U' : 'W') : null,
-      error_metric: errorMetric,
-      solver: solver,
-      log_flag: true,
-      resampling_frequency_days: 1,
-      resampling_frequency_weeks: 1,
-      email_send: false,
-      email_list: ''
-    };
-
-    // Add mode-specific parameters
-    if (selectedMode === 'pso') {
-      simulationData.pso_params = psoSettings;
-    } else if (selectedMode === 'latin') {
-      simulationData.latin_params = latinSettings;
-    } else if (selectedMode === 'monteCarlo') {
-      simulationData.monte_params = monteCarloSettings;
-    } else if (selectedMode === 'forward' && parameterUploadType === 'manual') {
-      simulationData.parameters_forward = parameters;
-    }
-
+    if (!group || !timeseriesId) return;
+  
     try {
-      const response = await fetch('http://127.0.0.1:8000/forecasting/simulations/', {
+      // Create the simulation with just IDs
+      const simulationData = {
+        user: authData.user.id,  // Just send the ID
+        group: group.id,         // Just send the ID
+        timeseries: timeseriesId, // Just send the ID
+        model: 'W',
+        mode: selectedMode === 'forward' ? 'F' : 'C',
+        method: 'S',
+        optimizer: selectedMode === 'pso' ? 'P' : 
+                  selectedMode === 'latin' ? 'L' : 
+                  selectedMode === 'monteCarlo' ? 'M' : null,
+        error_metric: errorMetric,
+        solver: solver,
+        interpolate: true,
+        n_data_interpolate: 7,
+        validation_required: true,
+        core: 1,
+        depth: 14.0,
+        compiler: 'C',
+        databaseformat: 'C',
+        computeparameterranges: true,
+        computeparameters: false,
+        log_flag: true,
+        resampling_frequency_days: 1,
+        resampling_frequency_weeks: 1,
+        email_send: false,
+        email_list: ''
+      };
+  
+      console.log('Sending simulation data:', JSON.stringify(simulationData, null, 2));
+  
+      const simResponse = await fetch('http://127.0.0.1:8000/forecasting/simulations/', {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`,
@@ -256,12 +232,54 @@ const EventForm = () => {
         },
         body: JSON.stringify(simulationData)
       });
-
-      if (!response.ok) throw new Error('Failed to create simulation');
-
-      history.push('/forecasting/');
+  
+      if (!simResponse.ok) {
+        const errorText = await simResponse.text();
+        console.error('Simulation Response:', errorText);
+        throw new Error(`Failed to create simulation: ${errorText}`);
+      }
+  
+      const simData = await simResponse.json();
+  
+      if (selectedMode === 'pso') {
+        const psoFormData = new FormData();
+        psoFormData.append('simulation', simData.id);
+        psoFormData.append('swarm_size', psoSettings.swarm_size);
+        psoFormData.append('phi1', psoSettings.phi1);
+        psoFormData.append('phi2', psoSettings.phi2);
+        psoFormData.append('max_iterations', psoSettings.max_iterations);
+      
+        const psoResponse = await fetch('http://127.0.0.1:8000/forecasting/psoparameter/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${authData.token}`
+            // Remove Content-Type header, let the browser set it for FormData
+          },
+          body: psoFormData
+        });
+      
+        if (!psoResponse.ok) {
+          const errorText = await psoResponse.text();
+          console.error('PSO Response:', errorText);
+          throw new Error('Failed to create PSO parameters');
+        }
+      }
+  
+      const statusResponse = await fetch(`http://127.0.0.1:8000/forecasting/simulations/${simData.id}/run_simulation/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${authData.token}`,
+        }
+      });
+  
+      if (!statusResponse.ok) {
+        throw new Error('Failed to run simulation');
+      }
+  
+      history.push(`/forecasting/groups/${group.id}`);
+  
     } catch (error) {
-      console.error('Simulation error:', error);
+      console.error('Error in simulation creation:', error);
     }
   };
 
