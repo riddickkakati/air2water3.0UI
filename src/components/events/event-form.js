@@ -1,268 +1,254 @@
 import React, { useState, useEffect } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { 
+import {
   Button,
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
   TextField,
   Paper,
   Typography,
-  Grid,
-  Checkbox,
-  Divider,
-  Alert
+  RadioGroup,
+  Radio,
+  FormControlLabel,
+  FormControl,
+  FormLabel,
+  makeStyles
 } from '@material-ui/core';
-import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
-import CloudUploadIcon from '@material-ui/icons/CloudUpload';
-import { NotificationManager } from 'react-notifications';
-import { uploadTimeseriesFile, uploadParameterFile, uploadParameterRangesFile, uploadValidationFile } from '../../services/event-services';
+import { useAuth } from '../../hooks/useAuth';
+import { useFetchGroup } from '../../hooks/fetch-group';
 
-export default function EventForm() {
+const useStyles = makeStyles((theme) => ({
+  root: {
+    padding: theme.spacing(3)
+  },
+  button: {
+    marginTop: theme.spacing(2)
+  },
+  formControl: {
+    margin: theme.spacing(2, 0)
+  },
+  backButton: {
+    marginRight: theme.spacing(2)
+  },
+  inputFile: {
+    margin: theme.spacing(2, 0)
+  }
+}));
+
+const EventForm = () => {
+  const classes = useStyles();
   const { authData } = useAuth();
-  const { state } = useLocation();
-  const { group } = state;
+  const location = useLocation();
   const history = useHistory();
+  
+  // Get group from location state
+  const group = location.state?.group;
+  
+  // Use the group id from location state
+  const [groupData, loading, error, refetchGroup] = useFetchGroup(group?.id);
+  const [isInGroup, setIsInGroup] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Form mode states
-  const [mode, setMode] = useState({
-    forward: false,
-    pso: false,
-    lhs: false,
-    monteCarlo: false
+  // Redirect if no group was passed
+  useEffect(() => {
+    if (!group) {
+      history.push('/forecasting');
+    }
+  }, [group, history]);
+  
+  const [currentStep, setCurrentStep] = useState(1);
+  const [timeseriesFile, setTimeseriesFile] = useState(null);
+  const [timeseriesId, setTimeseriesId] = useState(null);
+  const [selectedMode, setSelectedMode] = useState('');
+  const [parameterUploadType, setParameterUploadType] = useState('');
+  const [parameterFile, setParameterFile] = useState(null);
+  const [parameters, setParameters] = useState({
+    parameter1: '', parameter2: '', parameter3: '', parameter4: '',
+    parameter5: '', parameter6: '', parameter7: '', parameter8: ''
   });
-
-  // Error metric states
-  const [errorMetric, setErrorMetric] = useState({
-    rmse: false,
-    nse: false,
-    kge: false
-  });
-
-  // Numerical scheme states
-  const [numericalScheme, setNumericalScheme] = useState({
-    euler: false,
-    rk2: false,
-    rk4: false,
-    crankNicolson: false
-  });
-
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
-  // File states
-  const [files, setFiles] = useState({
-    timeseriesFile: null,
-    parameterFile: null,
-    parameterRangesFile: null,
-    validationFile: null
-  });
-
-  // Basic simulation parameters
-  const [formData, setFormData] = useState({
-    // Basic parameters
-    model: 'W',
-    interpolate: true,
-    n_data_interpolate: 7,
-    validation_required: true,
-    core: 1,
-    depth: 14.0,
-    compiler: 'F',
-    CFL: 0.9,
-    databaseformat: 'C',
-    computeparameterranges: true,
-    computeparameters: false,
-    log_flag: true,
-    resampling_frequency_days: 1,
-    resampling_frequency_weeks: 1,
-    email_send: false,
-    email_list: '',
-
-    // PSO specific parameters
+  
+  // Advanced settings states
+  const [psoSettings, setPsoSettings] = useState({
     swarm_size: 2000,
     phi1: 2.0,
     phi2: 2.0,
-    omega: 0.9,
-    max_iterations: 2000,
-
-    // LHS specific parameters
-    num_samples: 2000,
-
-    // Monte Carlo specific parameters
-    num_simulations: 2000,
-
-    // Forward mode parameters
-    parameter1: '',
-    parameter2: '',
-    parameter3: '',
-    parameter4: '',
-    parameter5: '',
-    parameter6: '',
-    parameter7: '',
-    parameter8: ''
+    max_iterations: 1000
   });
+  
+  const [latinSettings, setLatinSettings] = useState({
+    num_samples: 2000
+  });
+  
+  const [monteCarloSettings, setMonteCarloSettings] = useState({
+    num_iterations: 2000
+  });
+  
+  const [errorMetric, setErrorMetric] = useState('');
+  const [solver, setSolver] = useState('');
 
-  // Handle mode changes
-  const handleModeChange = (modeName) => (event) => {
-    const newMode = Object.keys(mode).reduce((acc, key) => {
-      acc[key] = key === modeName ? event.target.checked : false;
-      return acc;
-    }, {});
-    setMode(newMode);
-  };
-
-  // Handle error metric changes
-  const handleErrorMetricChange = (metricName) => (event) => {
-    const newMetrics = Object.keys(errorMetric).reduce((acc, key) => {
-      acc[key] = key === metricName ? event.target.checked : false;
-      return acc;
-    }, {});
-    setErrorMetric(newMetrics);
-  };
-
-  // Handle numerical scheme changes
-  const handleNumericalSchemeChange = (schemeName) => (event) => {
-    const newSchemes = Object.keys(numericalScheme).reduce((acc, key) => {
-      acc[key] = key === schemeName ? event.target.checked : false;
-      return acc;
-    }, {});
-    setNumericalScheme(newSchemes);
-  };
-
-  // Handle file changes
-  const handleFileChange = (fileType) => (event) => {
-    const file = event.target.files[0];
-    setFiles(prev => ({
-      ...prev,
-      [fileType]: file
-    }));
-  };
-
-  // Handle form data changes
-  const handleInputChange = (field) => (event) => {
-    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const validateFiles = () => {
-    // Required file validation
-    if (!files.timeseriesFile) {
-      NotificationManager.error("Time series file is required");
-      return false;
+  useEffect(() => {
+    if (groupData && authData?.user) {
+      const memberStatus = groupData.forecasting_members?.find(
+        member => member.user.id === authData.user.id
+      );
+      setIsInGroup(!!memberStatus);
+      setIsAdmin(memberStatus?.admin || false);
     }
+  }, [groupData, authData]);
 
-    // Validate file extensions
-    if (!files.timeseriesFile.name.endsWith('.txt')) {
-      NotificationManager.error("Time series file must be a .txt file");
-      return false;
+  if (!group) return <Typography>No group information provided</Typography>;
+  if (loading) return <Typography>Loading...</Typography>;
+  if (error) return <Typography>Error loading group: {error.message}</Typography>;
+  if (!isInGroup) return <Typography>You must be a member of this group to create an event</Typography>;
+
+  const uploadTimeseries = async () => {
+    if (!timeseriesFile || !group) return;
+  
+    try {
+      // First log what we're about to send
+      console.log('Uploading file:', timeseriesFile);
+      console.log('Group:', group);
+  
+      const formData = new FormData();
+      
+      // Add the file with key 'file'
+      formData.append('file', timeseriesFile);
+      
+      // Add the group ID
+      formData.append('group', group.id);
+      
+      // Add user ID (though this should be handled by backend)
+      formData.append('user', authData.user.id);
+      
+      // Add description (can be empty)
+      formData.append('description', '');
+  
+      // Log the FormData (for debugging)
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
+  
+      const response = await fetch('http://127.0.0.1:8000/forecasting/timeseries/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${authData.token}`
+        },
+        body: formData
+      });
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response status:', response.status);
+        console.error('Response text:', errorText);
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+  
+      const data = await response.json();
+      console.log('Upload success:', data);
+      setTimeseriesId(data.id);
+      setCurrentStep(2);
+  
+    } catch (error) {
+      console.error('Upload error:', error);
     }
-
-    if (mode.forward && files.parameterFile && !files.parameterFile.name.endsWith('.txt')) {
-      NotificationManager.error("Parameter file must be a .txt file");
-      return false;
+  };
+  
+  // Modify the file input to ensure it accepts only .txt files
+  const handleTimeseriesUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.name.endsWith('.txt')) {
+        alert('Please upload a .txt file');
+        return;
+      }
+      setTimeseriesFile(file);
     }
-
-    return true;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleParameterUpload = async () => {
+    if (!parameterFile || !groupData) return;
 
-    if (!validateFiles()) return;
+    const formData = new FormData();
+    formData.append('file', parameterFile);
+    formData.append('group', groupData.id);
+    formData.append('description', '');
 
     try {
-      // 1. Upload timeseries file
-      const timeseriesFormData = new FormData();
-      timeseriesFormData.append('file', files.timeseriesFile);
-      timeseriesFormData.append('group', group.id.toString()); // Ensure group id is string
-      timeseriesFormData.append('description', 'Time series data');
-      timeseriesFormData.append('user', authData.user.id.toString()); // Add user ID
-      const timeseriesData = await uploadTimeseriesFile(authData.token, timeseriesFormData);
-      
-      if (!timeseriesData) throw new Error('Failed to upload time series file');
+      const response = await fetch('http://127.0.0.1:8000/forecasting/parameters/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${authData.token}`
+        },
+        body: formData
+      });
 
-      // 2. Upload additional files if needed
-      let parameterFileData = null;
-      let parameterRangesData = null;
-      let validationFileData = null;
+      if (!response.ok) throw new Error('Failed to upload parameters');
 
-      if (files.parameterFile) {
-        const paramFormData = new FormData();
-        paramFormData.append('file', files.parameterFile);
-        paramFormData.append('group', group.id);
-        parameterFileData = await uploadParameterFile(authData.token, paramFormData);
-      }
+      const data = await response.json();
+      setCurrentStep(3);
+    } catch (error) {
+      console.error('Upload error:', error);
+    }
+  };
 
-      if (files.parameterRangesFile) {
-        const rangesFormData = new FormData();
-        rangesFormData.append('file', files.parameterRangesFile);
-        rangesFormData.append('group', group.id);
-        parameterRangesData = await uploadParameterRangesFile(authData.token, rangesFormData);
-      }
+  const handleSubmitSimulation = async () => {
+    if (!groupData) return;
 
-      if (files.validationFile) {
-        const validationFormData = new FormData();
-        validationFormData.append('file', files.validationFile);
-        validationFormData.append('group', group.id);
-        validationFileData = await uploadValidationFile(authData.token, validationFormData);
-      }
-
-      
-      // Create simulation data
-      const simulationData = {
-        // Basic identifiers
-        group: group.id,
-        timeseries: timeseriesData.id, // ID from the uploaded timeseries file
-
-        // Model and mode selection
-        model: formData.model, // 'W' for Air2water, 'S' for Air2stream
-        mode: mode.forward ? 'F' : 'C', // 'F' for Forward, 'C' for Calibration
-        method: 'S', // 'S' for SPOTPY, 'C' for PYCUP
-        
-        // Optimization settings based on selected mode
-        optimizer: mode.pso ? 'P' : (mode.lhs ? 'L' : 'M'), // 'P' for PSO, 'L' for LATINHYPERCUBE, 'M' for MONTECARLO
-        
-        // Error metric and solver selection
-        error_metric: errorMetric.rmse ? 'R' : (errorMetric.nse ? 'N' : 'K'), // 'R' for RMSE, 'N' for NSE, 'K' for KGE
-        solver: numericalScheme.euler ? 'E' : 
-                (numericalScheme.rk2 ? 'T' : 
-                (numericalScheme.rk4 ? 'F' : 'C')), // 'E' for Euler, 'T' for RK2, 'F' for RK4, 'C' for CrankNicolson
-
-        // Basic simulation parameters
-        interpolate: formData.interpolate,
-        n_data_interpolate: formData.n_data_interpolate,
-        validation_required: formData.validation_required,
-        core: formData.core,
-        depth: formData.depth,
-        compiler: formData.compiler, // 'C' for Cython, 'F' for Fortran
-        CFL: formData.CFL,
-        databaseformat: formData.databaseformat, // 'C' for Custom, 'R' for RAM
-        computeparameterranges: formData.computeparameterranges,
-        computeparameters: formData.computeparameters,
-        
-        // Advanced settings
-        log_flag: formData.log_flag,
-        resampling_frequency_days: formData.resampling_frequency_days,
-        resampling_frequency_weeks: formData.resampling_frequency_weeks,
-        email_send: formData.email_send,
-        email_list: formData.email_list,
-
-        // File references (if uploaded)
-        parameters_file: files.parameterFile ? parameterFileData.id : null,
-        parameter_ranges: files.parameterRangesFile ? parameterRangesData.id : null,
-        user_validation: files.validationFile ? validationFileData.id : null,
-
-        // Mode specific options
-        forward_options: mode.forward ? (files.parameterFile ? 'U' : 'W') : null, // 'U' for Upload, 'W' for Write
+    const simulationData = {
+      user: {
+        id: authData.user.id,
+        username: authData.user.username,
+        email: authData.user.email,
+        profile: authData.user.profile
+      },
+      group: {
+        id: groupData.id,
+        name: groupData.name,
+        location: groupData.location,
+        description: groupData.description
+      },
+      timeseries: {
+        id: timeseriesId,
+        group: groupData.id,
+        user: authData.user.id
+      },
+      interpolate: true,
+      n_data_interpolate: 7,
+      validation_required: true,
+      core: 1,
+      depth: 14.0,
+      compiler: 'C',
+      databaseformat: 'C',
+      computeparameterranges: true,
+      computeparameters: false,
+      model: 'W',
+      mode: selectedMode === 'forward' ? 'F' : 'C',
+      method: 'S',
+      optimizer: selectedMode === 'pso' ? 'P' : 
+                selectedMode === 'latin' ? 'L' : 
+                selectedMode === 'monteCarlo' ? 'M' : null,
+      forward_options: selectedMode === 'forward' ? 
+                      (parameterUploadType === 'upload' ? 'U' : 'W') : null,
+      error_metric: errorMetric,
+      solver: solver,
+      log_flag: true,
+      resampling_frequency_days: 1,
+      resampling_frequency_weeks: 1,
+      email_send: false,
+      email_list: ''
     };
 
-      // Create the simulation
-      const simResponse = await fetch('http://127.0.0.1:8000/forecasting/simulations/', {
+    // Add mode-specific parameters
+    if (selectedMode === 'pso') {
+      simulationData.pso_params = psoSettings;
+    } else if (selectedMode === 'latin') {
+      simulationData.latin_params = latinSettings;
+    } else if (selectedMode === 'monteCarlo') {
+      simulationData.monte_params = monteCarloSettings;
+    } else if (selectedMode === 'forward' && parameterUploadType === 'manual') {
+      simulationData.parameters_forward = parameters;
+    }
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/forecasting/simulations/', {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`,
@@ -271,191 +257,225 @@ export default function EventForm() {
         body: JSON.stringify(simulationData)
       });
 
-      if (!simResponse.ok) throw new Error('Failed to create simulation');
+      if (!response.ok) throw new Error('Failed to create simulation');
 
-      NotificationManager.success("Simulation created successfully");
-      history.push(`/forecasting/groups/${group.id}`);
-
+      history.push('/forecasting/');
     } catch (error) {
-      NotificationManager.error(error.message || "Error creating simulation");
+      console.error('Simulation error:', error);
     }
   };
 
-  return (
-    <Paper className="p-6">
-      <Typography variant="h5" className="mb-4">
-        New Simulation for {group.name}
-      </Typography>
+  if (loading) return <Typography>Loading...</Typography>;
+  if (error) return <Typography>Error loading group: {error.message}</Typography>;
+  if (!groupData) return <Typography>No group data available</Typography>;
+  if (!isInGroup) return <Typography>You must be a member of this group to create an event</Typography>;
 
-      <form onSubmit={handleSubmit}>
-        {/* Mode Selection */}
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Typography variant="h6">Simulation Mode</Typography>
-            <FormControlLabel
-              control={<Checkbox checked={mode.forward} onChange={handleModeChange('forward')} />}
-              label="Forward Mode"
-            />
-            <FormControlLabel
-              control={<Checkbox checked={mode.pso} onChange={handleModeChange('pso')} />}
-              label="Particle Swarm Optimization"
-            />
-            <FormControlLabel
-              control={<Checkbox checked={mode.lhs} onChange={handleModeChange('lhs')} />}
-              label="Latin Hypercube"
-            />
-            <FormControlLabel
-              control={<Checkbox checked={mode.monteCarlo} onChange={handleModeChange('monteCarlo')} />}
-              label="Monte Carlo"
-            />
-          </Grid>
 
-          {/* File Uploads */}
-          <Grid item xs={12}>
-            <Typography variant="h6">Required Files</Typography>
-            <input
-              accept=".txt"
-              style={{ display: 'none' }}
-              id="timeseries-file"
-              type="file"
-              onChange={handleFileChange('timeseriesFile')}
-            />
-            <label htmlFor="timeseries-file">
+  const renderStep1 = () => (
+    <div>
+      <Typography variant="h6">Step 1: Upload Time Series Data</Typography>
+      <input
+        type="file"
+        accept=".txt"
+        onChange={handleTimeseriesUpload}
+        style={{ display: 'block', marginBottom: '1rem' }}
+      />
+      {timeseriesFile && (
+        <Typography variant="body2">
+          Selected file: {timeseriesFile.name}
+        </Typography>
+      )}
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={uploadTimeseries}
+        disabled={!timeseriesFile}
+      >
+        Upload and Continue
+      </Button>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div>
+      <Typography variant="h6">Step 2: Select Calibration Mode</Typography>
+      <FormControl component="fieldset">
+        <RadioGroup value={selectedMode} onChange={(e) => setSelectedMode(e.target.value)}>
+          <FormControlLabel value="forward" control={<Radio />} label="Forward Mode" />
+          <FormControlLabel value="pso" control={<Radio />} label="Particle Swarm Optimization" />
+          <FormControlLabel value="latin" control={<Radio />} label="Latin Hypercube" />
+          <FormControlLabel value="monteCarlo" control={<Radio />} label="Monte Carlo" />
+        </RadioGroup>
+      </FormControl>
+
+      {selectedMode === 'forward' && (
+        <div>
+          <FormControl component="fieldset">
+            <RadioGroup 
+              value={parameterUploadType} 
+              onChange={(e) => setParameterUploadType(e.target.value)}
+            >
+              <FormControlLabel value="upload" control={<Radio />} label="Upload Parameters File" />
+              <FormControlLabel value="manual" control={<Radio />} label="Enter Parameters Manually" />
+            </RadioGroup>
+          </FormControl>
+
+          {parameterUploadType === 'upload' && (
+            <div>
+              <input
+                type="file"
+                accept=".txt"
+                onChange={(e) => setParameterFile(e.target.files[0])}
+              />
               <Button
                 variant="contained"
-                component="span"
-                startIcon={<CloudUploadIcon />}
+                color="primary"
+                onClick={handleParameterUpload}
+                disabled={!parameterFile}
               >
-                Upload Time Series Data {files.timeseriesFile ? `(${files.timeseriesFile.name})` : ''}
+                Upload Parameters
               </Button>
-            </label>
-          </Grid>
-
-          {/* Error Metrics */}
-          <Grid item xs={12}>
-            <Typography variant="h6">Error Metric</Typography>
-            <FormControlLabel
-              control={<Checkbox checked={errorMetric.rmse} onChange={handleErrorMetricChange('rmse')} />}
-              label="RMSE"
-            />
-            <FormControlLabel
-              control={<Checkbox checked={errorMetric.nse} onChange={handleErrorMetricChange('nse')} />}
-              label="NSE"
-            />
-            <FormControlLabel
-              control={<Checkbox checked={errorMetric.kge} onChange={handleErrorMetricChange('kge')} />}
-              label="KGE"
-            />
-          </Grid>
-
-          {/* Numerical Schemes */}
-          <Grid item xs={12}>
-            <Typography variant="h6">Numerical Scheme</Typography>
-            <FormControlLabel
-              control={<Checkbox checked={numericalScheme.euler} onChange={handleNumericalSchemeChange('euler')} />}
-              label="Euler"
-            />
-            <FormControlLabel
-              control={<Checkbox checked={numericalScheme.rk2} onChange={handleNumericalSchemeChange('rk2')} />}
-              label="RK2"
-            />
-            <FormControlLabel
-              control={<Checkbox checked={numericalScheme.rk4} onChange={handleNumericalSchemeChange('rk4')} />}
-              label="RK4"
-            />
-            <FormControlLabel
-              control={<Checkbox checked={numericalScheme.crankNicolson} onChange={handleNumericalSchemeChange('crankNicolson')} />}
-              label="Crank-Nicolson"
-            />
-          </Grid>
-
-          {/* Advanced Settings Button */}
-          <Grid item xs={12}>
-            <Button
-              variant="outlined"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-            >
-              {showAdvanced ? 'Hide' : 'Show'} Advanced Settings
-            </Button>
-          </Grid>
-
-          {/* Advanced Settings Content */}
-          {showAdvanced && (
-            <>
-              {/* PSO Parameters */}
-              {mode.pso && (
-                <Grid item xs={12}>
-                  <Typography variant="h6">PSO Parameters</Typography>
-                  <TextField
-                    label="Swarm Size"
-                    type="number"
-                    value={formData.swarm_size}
-                    onChange={handleInputChange('swarm_size')}
-                    fullWidth
-                    className="mb-2"
-                  />
-                  <TextField
-                    label="Phi1"
-                    type="number"
-                    value={formData.phi1}
-                    onChange={handleInputChange('phi1')}
-                    fullWidth
-                    className="mb-2"
-                  />
-                  <TextField
-                    label="Phi2"
-                    type="number"
-                    value={formData.phi2}
-                    onChange={handleInputChange('phi2')}
-                    fullWidth
-                    className="mb-2"
-                  />
-                </Grid>
-              )}
-
-              {/* LHS Parameters */}
-              {mode.lhs && (
-                <Grid item xs={12}>
-                  <Typography variant="h6">Latin Hypercube Parameters</Typography>
-                  <TextField
-                    label="Number of Samples"
-                    type="number"
-                    value={formData.num_samples}
-                    onChange={handleInputChange('num_samples')}
-                    fullWidth
-                  />
-                </Grid>
-              )}
-
-              {/* Monte Carlo Parameters */}
-              {mode.monteCarlo && (
-                <Grid item xs={12}>
-                  <Typography variant="h6">Monte Carlo Parameters</Typography>
-                  <TextField
-                    label="Number of Simulations"
-                    type="number"
-                    value={formData.num_simulations}
-                    onChange={handleInputChange('num_simulations')}
-                    fullWidth
-                  />
-                </Grid>
-              )}
-            </>
+            </div>
           )}
 
-          {/* Submit Button */}
-          <Grid item xs={12}>
-            <Button
-              variant="contained"
-              color="primary"
-              type="submit"
-              fullWidth
-            >
-              Create Simulation
-            </Button>
-          </Grid>
-        </Grid>
-      </form>
+          {parameterUploadType === 'manual' && (
+            <div>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                <TextField
+                  key={num}
+                  label={`Parameter ${num}`}
+                  value={parameters[`parameter${num}`]}
+                  onChange={(e) => setParameters({
+                    ...parameters,
+                    [`parameter${num}`]: e.target.value
+                  })}
+                  type="number"
+                />
+              ))}
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => setCurrentStep(3)}
+              >
+                Continue
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {selectedMode === 'pso' && (
+        <div>
+          <Typography variant="subtitle1">PSO Settings</Typography>
+          <TextField
+            label="Swarm Size"
+            value={psoSettings.swarm_size}
+            onChange={(e) => setPsoSettings({...psoSettings, swarm_size: e.target.value})}
+            type="number"
+          />
+          <TextField
+            label="Phi1"
+            value={psoSettings.phi1}
+            onChange={(e) => setPsoSettings({...psoSettings, phi1: e.target.value})}
+            type="number"
+          />
+          <TextField
+            label="Phi2"
+            value={psoSettings.phi2}
+            onChange={(e) => setPsoSettings({...psoSettings, phi2: e.target.value})}
+            type="number"
+          />
+          <TextField
+            label="Max Iterations"
+            value={psoSettings.max_iterations}
+            onChange={(e) => setPsoSettings({...psoSettings, max_iterations: e.target.value})}
+            type="number"
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setCurrentStep(3)}
+          >
+            Continue
+          </Button>
+        </div>
+      )}
+
+      {/* Similar blocks for Latin Hypercube and Monte Carlo */}
+      {/* Add those blocks here */}
+
+      <Button
+        variant="contained"
+        onClick={() => setCurrentStep(1)}
+      >
+        Back
+      </Button>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div>
+      <Typography variant="h6">Step 3: Select Error Metric</Typography>
+      <FormControl component="fieldset">
+        <RadioGroup value={errorMetric} onChange={(e) => setErrorMetric(e.target.value)}>
+          <FormControlLabel value="R" control={<Radio />} label="RMSE" />
+          <FormControlLabel value="N" control={<Radio />} label="NSE" />
+          <FormControlLabel value="K" control={<Radio />} label="KGE" />
+        </RadioGroup>
+      </FormControl>
+      <Button
+        variant="contained"
+        onClick={() => setCurrentStep(2)}
+      >
+        Back
+      </Button>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={() => setCurrentStep(4)}
+        disabled={!errorMetric}
+      >
+        Continue
+      </Button>
+    </div>
+  );
+
+  const renderStep4 = () => (
+    <div>
+      <Typography variant="h6">Step 4: Select Solver</Typography>
+      <FormControl component="fieldset">
+        <RadioGroup value={solver} onChange={(e) => setSolver(e.target.value)}>
+          <FormControlLabel value="E" control={<Radio />} label="Euler" />
+          <FormControlLabel value="T" control={<Radio />} label="Runge Kutta 2nd order" />
+          <FormControlLabel value="F" control={<Radio />} label="Runge Kutta 4th order" />
+          <FormControlLabel value="C" control={<Radio />} label="Crank-Nicolson" />
+        </RadioGroup>
+      </FormControl>
+      <Button
+        variant="contained"
+        onClick={() => setCurrentStep(3)}
+      >
+        Back
+      </Button>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleSubmitSimulation}
+        disabled={!solver}
+      >
+        Run Simulation
+      </Button>
+    </div>
+  );
+
+  return (
+    <Paper className={classes.root}>
+      {currentStep === 1 && renderStep1()}
+      {currentStep === 2 && renderStep2()}
+      {currentStep === 3 && renderStep3()}
+      {currentStep === 4 && renderStep4()}
     </Paper>
   );
-}
+};
+
+export default EventForm;
