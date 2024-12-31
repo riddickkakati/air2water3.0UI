@@ -19,7 +19,6 @@ import {
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import CloudUploadIcon from '@material-ui/icons/CloudUpload';
 import { NotificationManager } from 'react-notifications';
-import { uploadTimeseriesFile, uploadParameterFile, uploadParameterRangesFile, uploadValidationFile } from '../../services/event-services';
 
 export default function EventForm() {
   const { authData } = useAuth();
@@ -175,91 +174,36 @@ export default function EventForm() {
 
     if (!validateFiles()) return;
 
+    // Create FormData for file uploads
+    const fileData = new FormData();
+    fileData.append('file', files.timeseriesFile);
+    fileData.append('group', group.id);
+    fileData.append('description', 'Time series data');
+
     try {
-      // 1. Upload timeseries file
-      const timeseriesFormData = new FormData();
-      timeseriesFormData.append('file', files.timeseriesFile);
-      timeseriesFormData.append('group', group.id.toString()); // Ensure group id is string
-      timeseriesFormData.append('description', 'Time series data');
-      timeseriesFormData.append('user', authData.user.id.toString()); // Add user ID
-      const timeseriesData = await uploadTimeseriesFile(authData.token, timeseriesFormData);
-      
-      if (!timeseriesData) throw new Error('Failed to upload time series file');
+      // First upload the time series file
+      const timeseriesResponse = await fetch('http://127.0.0.1:8000/forecasting/timeseries/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${authData.token}`
+        },
+        body: fileData
+      });
 
-      // 2. Upload additional files if needed
-      let parameterFileData = null;
-      let parameterRangesData = null;
-      let validationFileData = null;
-
-      if (files.parameterFile) {
-        const paramFormData = new FormData();
-        paramFormData.append('file', files.parameterFile);
-        paramFormData.append('group', group.id);
-        parameterFileData = await uploadParameterFile(authData.token, paramFormData);
-      }
-
-      if (files.parameterRangesFile) {
-        const rangesFormData = new FormData();
-        rangesFormData.append('file', files.parameterRangesFile);
-        rangesFormData.append('group', group.id);
-        parameterRangesData = await uploadParameterRangesFile(authData.token, rangesFormData);
-      }
-
-      if (files.validationFile) {
-        const validationFormData = new FormData();
-        validationFormData.append('file', files.validationFile);
-        validationFormData.append('group', group.id);
-        validationFileData = await uploadValidationFile(authData.token, validationFormData);
-      }
-
+      if (!timeseriesResponse.ok) throw new Error('Failed to upload time series file');
       
       // Create simulation data
       const simulationData = {
-        // Basic identifiers
         group: group.id,
-        timeseries: timeseriesData.id, // ID from the uploaded timeseries file
-
-        // Model and mode selection
-        model: formData.model, // 'W' for Air2water, 'S' for Air2stream
-        mode: mode.forward ? 'F' : 'C', // 'F' for Forward, 'C' for Calibration
-        method: 'S', // 'S' for SPOTPY, 'C' for PYCUP
-        
-        // Optimization settings based on selected mode
-        optimizer: mode.pso ? 'P' : (mode.lhs ? 'L' : 'M'), // 'P' for PSO, 'L' for LATINHYPERCUBE, 'M' for MONTECARLO
-        
-        // Error metric and solver selection
-        error_metric: errorMetric.rmse ? 'R' : (errorMetric.nse ? 'N' : 'K'), // 'R' for RMSE, 'N' for NSE, 'K' for KGE
-        solver: numericalScheme.euler ? 'E' : 
-                (numericalScheme.rk2 ? 'T' : 
-                (numericalScheme.rk4 ? 'F' : 'C')), // 'E' for Euler, 'T' for RK2, 'F' for RK4, 'C' for CrankNicolson
-
-        // Basic simulation parameters
-        interpolate: formData.interpolate,
-        n_data_interpolate: formData.n_data_interpolate,
-        validation_required: formData.validation_required,
-        core: formData.core,
-        depth: formData.depth,
-        compiler: formData.compiler, // 'C' for Cython, 'F' for Fortran
-        CFL: formData.CFL,
-        databaseformat: formData.databaseformat, // 'C' for Custom, 'R' for RAM
-        computeparameterranges: formData.computeparameterranges,
-        computeparameters: formData.computeparameters,
-        
-        // Advanced settings
-        log_flag: formData.log_flag,
-        resampling_frequency_days: formData.resampling_frequency_days,
-        resampling_frequency_weeks: formData.resampling_frequency_weeks,
-        email_send: formData.email_send,
-        email_list: formData.email_list,
-
-        // File references (if uploaded)
-        parameters_file: files.parameterFile ? parameterFileData.id : null,
-        parameter_ranges: files.parameterRangesFile ? parameterRangesData.id : null,
-        user_validation: files.validationFile ? validationFileData.id : null,
-
-        // Mode specific options
-        forward_options: mode.forward ? (files.parameterFile ? 'U' : 'W') : null, // 'U' for Upload, 'W' for Write
-    };
+        model: formData.model,
+        mode: mode.forward ? 'F' : 'C',
+        method: 'S', // Default to SPOTPY
+        optimizer: mode.pso ? 'P' : (mode.lhs ? 'L' : 'M'),
+        error_metric: errorMetric.rmse ? 'R' : (errorMetric.nse ? 'N' : 'K'),
+        solver: numericalScheme.euler ? 'E' : (numericalScheme.rk2 ? 'T' : (numericalScheme.rk4 ? 'F' : 'C')),
+        // Add other parameters...
+        ...formData
+      };
 
       // Create the simulation
       const simResponse = await fetch('http://127.0.0.1:8000/forecasting/simulations/', {

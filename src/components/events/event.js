@@ -65,7 +65,7 @@ export default function Event(){
     }
   }, [data])
 
-  const sendBet = async () => {
+  /*const sendBet = async () => {
     const bet = await placeBet(authData.token, {score1, score2, 'event': event.id});
     if(bet) {
       if(bet.new){
@@ -89,7 +89,7 @@ export default function Event(){
     } else {
       NotificationManager.error("Scores could not be set");
     }
-  }
+  }*/
 
   if (error) return <h1>Error</h1>
   if (loading) return <h1>Loading....</h1>
@@ -131,16 +131,17 @@ export default function Event(){
                   onChange={ e => setScore2(e.target.value)}
                 />
                 <br/><br/>
-                <Button variant="contained" color="primary"
+                {/*<Button variant="contained" color="primary"
                     onClick={()=> sendBet()} disabled={!score1 || !score2}>
                   Place bet
-                  </Button>
+                  </Button>*/}
               </div>
+              
               
               :
               event.is_admin ? 
               <div>
-                <CssTextField label="Score 1" type="number"  className={classes.numberField}
+                {/*<CssTextField label="Score 1" type="number"  className={classes.numberField}
                 onChange={ e => setScore1(e.target.value)}
                 />
                 <span className={classes.accent}>&nbsp; : &nbsp;</span> 
@@ -151,7 +152,7 @@ export default function Event(){
               <Button variant="contained" color="primary"
               onClick={()=> setScores()} disabled={!score1 || !score2}>
                 Set Scores
-                </Button>
+                </Button>*/}
                 </div> : null
               }
           </div>
