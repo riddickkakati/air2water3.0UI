@@ -165,17 +165,32 @@ export default function EventList() {
 
             {results && results.status === 'completed' && (
               <Grid container spacing={2}>
-                {results.plot_path && (
+                {results.calibration_plot_path && (
                   <Grid item xs={12} sm={6}>
                     <Button
                       variant="contained"
                       color="primary"
                       className={classes.downloadButton}
-                      href={results.plot_path}
+                      href={results.calibration_plot_path}
                       target="_blank"
                       startIcon={<TimelineIcon />}
                     >
-                      View Model Run Plot
+                      View calibration results plot
+                    </Button>
+                  </Grid>
+                )}
+
+            {results.validation_plot_path && (
+                  <Grid item xs={12} sm={6}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      className={classes.downloadButton}
+                      href={results.validation_plot_path}
+                      target="_blank"
+                      startIcon={<TimelineIcon />}
+                    >
+                      View validation results plot
                     </Button>
                   </Grid>
                 )}
@@ -225,20 +240,36 @@ export default function EventList() {
                   </Grid>
                 )}
 
-                {results.timeseries_path && (
+                {results.calibration_timeseries_path && (
                   <Grid item xs={12} sm={6}>
                     <Button
                       variant="contained"
                       color="secondary"
                       className={classes.downloadButton}
-                      href={results.timeseries_path}
+                      href={results.calibration_timeseries_path}
                       download
                       startIcon={<GetAppIcon />}
                     >
-                      Download Results CSV
+                      Download calibration results CSV
                     </Button>
                   </Grid>
                 )}
+
+                {results.validation_timeseries_path && (
+                  <Grid item xs={12} sm={6}>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      className={classes.downloadButton}
+                      href={results.validation_timeseries_path}
+                      download
+                      startIcon={<GetAppIcon />}
+                    >
+                      Download validation results CSV
+                    </Button>
+                  </Grid>
+                )}
+
               </Grid>
             )}
 
