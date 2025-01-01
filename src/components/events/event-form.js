@@ -103,6 +103,8 @@ const EventForm = () => {
     swarm_size: 2000,
     phi1: 2.0,
     phi2: 2.0,
+    omega1: 0.9,
+    omega2: 0.4,
     max_iterations: 1000
   });
   
@@ -284,13 +286,20 @@ const EventForm = () => {
   // Add function to handle validation file upload
   const handleValidationFileUpload = async () => {
     if (!validationFile || !group) return;
-
+  
     const formData = new FormData();
     formData.append('file', validationFile);
     formData.append('group', group.id);
-    formData.append('description', '');
-
+    formData.append('user', authData.user.id);  // Add user ID
+    formData.append('description', '');  // Add description even if empty
+  
     try {
+      console.log('Uploading validation file with:', {
+        file: validationFile.name,
+        group: group.id,
+        user: authData.user.id
+      });
+  
       const response = await fetch('http://127.0.0.1:8000/forecasting/uservalidation/', {
         method: 'POST',
         headers: {
@@ -298,13 +307,20 @@ const EventForm = () => {
         },
         body: formData
       });
-
-      if (!response.ok) throw new Error('Failed to upload validation file');
-
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Validation file upload error:', errorText);
+        throw new Error('Failed to upload validation file');
+      }
+  
       const data = await response.json();
+      console.log('Validation file upload successful:', data);
       setValidationFileId(data.id);
+      return data.id;
     } catch (error) {
       console.error('Validation file upload error:', error);
+      return null;
     }
   };
 
@@ -365,13 +381,19 @@ const EventForm = () => {
         console.log('Parameter ranges upload confirmed, ID:', currentParameterRangesId);
       }
   
-      // Forward mode parameter handling
-      if (selectedMode === 'forward' && parameterUploadType === 'manual') {
-        await handleParameterForwardSubmit();
-      }
+    // Forward mode parameter handling
+    if (selectedMode === 'forward' && parameterUploadType === 'manual') {
+      await handleParameterForwardSubmit();
+    }
+    
+    let currentValidationId = validationFileId;
+
+    if (validationFile) {
+      currentValidationId = await handleValidationFileUpload();
+    }
+    
+    // Create simulation data with confirmed parameter ranges ID
   
-      // Create simulation data with confirmed parameter ranges ID
-      // Create simulation data with confirmed parameter ranges ID
     const simulationData = {
       user: authData.user.id,
       group: group.id,
@@ -384,13 +406,13 @@ const EventForm = () => {
                 selectedMode === 'monteCarlo' ? 'M' : null,
       error_metric: errorMetric,
       parameter_ranges_file: currentParameterRangesId,
-      user_validation_file: validationFileId,
+      user_validation_file: currentValidationId,
       parameters_file: selectedMode === 'forward' && parameterUploadType === 'upload' ? parameterFileId : null,
       parameters_forward: selectedMode === 'forward' && parameterUploadType === 'manual' ? parameterForwardId : null,
       solver: solver,
       interpolate: true,
       n_data_interpolate: 7,
-      validation_required: true,
+      validation_required: false,
       core: 1,
       depth: 14.0,
       compiler: 'C',
@@ -430,6 +452,8 @@ const EventForm = () => {
         psoFormData.append('swarm_size', psoSettings.swarm_size);
         psoFormData.append('phi1', psoSettings.phi1);
         psoFormData.append('phi2', psoSettings.phi2);
+        psoFormData.append('omega1', psoSettings.omega1);
+        psoFormData.append('omega2', psoSettings.omega2);
         psoFormData.append('max_iterations', psoSettings.max_iterations);
       
         const psoResponse = await fetch('http://127.0.0.1:8000/forecasting/psoparameter/', {
@@ -622,7 +646,7 @@ const EventForm = () => {
                   <Typography variant="subtitle1" gutterBottom>Validation File (Optional)</Typography>
                   <input
                     type="file"
-                    accept=".yaml"
+                    accept=".txt"
                     onChange={(e) => setValidationFile(e.target.files[0])}
                     className={classes.inputFile}
                   />
@@ -724,6 +748,26 @@ const EventForm = () => {
               label="Phi2"
               value={psoSettings.phi2}
               onChange={(e) => setPsoSettings({...psoSettings, phi2: e.target.value})}
+              type="number"
+              fullWidth
+              className={classes.textField}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Omega1"
+              value={psoSettings.omega1}
+              onChange={(e) => setPsoSettings({...psoSettings, omega1: e.target.value})}
+              type="number"
+              fullWidth
+              className={classes.textField}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Omega2"
+              value={psoSettings.omega2}
+              onChange={(e) => setPsoSettings({...psoSettings, omega2: e.target.value})}
               type="number"
               fullWidth
               className={classes.textField}
