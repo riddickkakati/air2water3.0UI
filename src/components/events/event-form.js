@@ -622,7 +622,7 @@ const EventForm = () => {
                   <Typography variant="subtitle1" gutterBottom>Validation File (Optional)</Typography>
                   <input
                     type="file"
-                    accept=".txt"
+                    accept=".yaml"
                     onChange={(e) => setValidationFile(e.target.files[0])}
                     className={classes.inputFile}
                   />
@@ -639,10 +639,14 @@ const EventForm = () => {
                 <Typography variant="subtitle1" gutterBottom>Parameters File</Typography>
                 <input
                   type="file"
-                  accept=".txt"
+                  accept=".yaml"
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
+                      if (!file.name.endsWith('.yaml')) {
+                        alert('Please upload a .yaml file');
+                        return;
+                      }
                       console.log('Parameter file selected:', file.name);
                       setParameterFile(file);
                     }

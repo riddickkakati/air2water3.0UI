@@ -180,7 +180,7 @@ export default function EventList() {
                   </Grid>
                 )}
 
-                {results.dotty_plots && (
+                {results.dotty_plots && simulation.mode !== 'F' && (
                   <Grid item xs={12} sm={6}>
                     <Button
                       variant="contained"
@@ -195,7 +195,7 @@ export default function EventList() {
                   </Grid>
                 )}
 
-                {results.obj_function_path && (
+                {results.obj_function_path && simulation.mode !== 'F' && (
                   <Grid item xs={12} sm={6}>
                     <Button
                       variant="contained"
@@ -210,7 +210,7 @@ export default function EventList() {
                   </Grid>
                 )}
 
-                {results.parameter_convergence && (
+                {results.parameter_convergence && simulation.mode !== 'F' && (
                   <Grid item xs={12} sm={6}>
                     <Button
                       variant="contained"
