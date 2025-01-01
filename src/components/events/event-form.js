@@ -202,9 +202,16 @@ const EventForm = () => {
     const formData = new FormData();
     formData.append('file', parameterFile);
     formData.append('group', groupData.id);
+    formData.append('user', authData.user.id);
     formData.append('description', '');
 
     try {
+      console.log('Uploading parameter file with:', {
+        file: parameterFile.name,
+        group: groupData.id,
+        user: authData.user.id
+      });
+
       const response = await fetch('http://127.0.0.1:8000/forecasting/parameters/', {
         method: 'POST',
         headers: {
@@ -213,10 +220,16 @@ const EventForm = () => {
         body: formData
       });
 
-      if (!response.ok) throw new Error('Failed to upload parameters');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Parameter upload error:', errorText);
+        throw new Error('Failed to upload parameters');
+      }
 
       const data = await response.json();
-      setCurrentStep(3);
+      console.log('Parameter upload successful:', data);
+      setParameterFileId(data.id);
+      setCurrentStep(3);  // Move to next step after successful upload
     } catch (error) {
       console.error('Upload error:', error);
     }
@@ -358,37 +371,38 @@ const EventForm = () => {
       }
   
       // Create simulation data with confirmed parameter ranges ID
-      const simulationData = {
-        user: authData.user.id,
-        group: group.id,
-        timeseries: timeseriesId,
-        model: 'W',
-        mode: selectedMode === 'forward' ? 'F' : 'C',
-        method: 'S',
-        optimizer: selectedMode === 'pso' ? 'P' : 
-                  selectedMode === 'latin' ? 'L' : 
-                  selectedMode === 'monteCarlo' ? 'M' : null,
-        error_metric: errorMetric,
-        parameter_ranges_file: currentParameterRangesId,  // Use the confirmed ID
-        user_validation_file: validationFileId,
-        parameters_file: parameterFileId,
-        parameters_forward: parameterForwardId,
-        solver: solver,
-        interpolate: true,
-        n_data_interpolate: 7,
-        validation_required: true,
-        core: 1,
-        depth: 14.0,
-        compiler: 'C',
-        databaseformat: 'C',
-        computeparameterranges: true,
-        computeparameters: false,
-        log_flag: true,
-        resampling_frequency_days: 1,
-        resampling_frequency_weeks: 1,
-        email_send: false,
-        email_list: ''
-      };
+      // Create simulation data with confirmed parameter ranges ID
+    const simulationData = {
+      user: authData.user.id,
+      group: group.id,
+      timeseries: timeseriesId,
+      model: 'W',
+      mode: selectedMode === 'forward' ? 'F' : 'C',
+      method: 'S',
+      optimizer: selectedMode === 'pso' ? 'P' : 
+                selectedMode === 'latin' ? 'L' : 
+                selectedMode === 'monteCarlo' ? 'M' : null,
+      error_metric: errorMetric,
+      parameter_ranges_file: currentParameterRangesId,
+      user_validation_file: validationFileId,
+      parameters_file: selectedMode === 'forward' && parameterUploadType === 'upload' ? parameterFileId : null,
+      parameters_forward: selectedMode === 'forward' && parameterUploadType === 'manual' ? parameterForwardId : null,
+      solver: solver,
+      interpolate: true,
+      n_data_interpolate: 7,
+      validation_required: true,
+      core: 1,
+      depth: 14.0,
+      compiler: 'C',
+      databaseformat: 'C',
+      computeparameterranges: true,
+      computeparameters: false,
+      log_flag: true,
+      resampling_frequency_days: 1,
+      resampling_frequency_weeks: 1,
+      email_send: false,
+      email_list: ''
+    };
   
       console.log('About to send simulation data:', JSON.stringify(simulationData, null, 2));
   
@@ -505,9 +519,12 @@ const EventForm = () => {
     onNext, 
     nextLabel = "Continue",
     showBack = true,
-    disableNext = false
+    disableNext = false,
+    hidden = false
   }) => {
     const classes = useStyles();
+    
+    if (hidden) return null;
     
     return (
       <div className={classes.navigationContainer}>
@@ -572,6 +589,8 @@ const EventForm = () => {
               setParameterRangesFile(null);
               setParameterRangesId(null);
             }
+            // Reset parameter upload type when changing modes
+            setParameterUploadType('');
           }}
         >
           <FormControlLabel value="forward" control={<Radio />} label="Forward Mode" />
@@ -596,28 +615,55 @@ const EventForm = () => {
           </FormControl>
   
           {parameterUploadType === 'upload' && (
-            <div className={classes.fileUpload}>
-              <Typography variant="subtitle1" gutterBottom>Parameters File</Typography>
-              <input
-                type="file"
-                accept=".txt"
-                onChange={(e) => setParameterFile(e.target.files[0])}
-                className={classes.inputFile}
-              />
-              {parameterFile && (
-                <Typography variant="body2" color="textSecondary">
-                  Selected file: {parameterFile.name}
-                </Typography>
-              )}
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleParameterUpload}
-                disabled={!parameterFile}
-                className={classes.button}
-              >
-                Upload Parameters
-              </Button>
+            <div className={classes.modeOptions}>
+              {/* Validation File Upload first */}
+              <Grid container spacing={3} className={classes.fileUploads}>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>Validation File (Optional)</Typography>
+                  <input
+                    type="file"
+                    accept=".txt"
+                    onChange={(e) => setValidationFile(e.target.files[0])}
+                    className={classes.inputFile}
+                  />
+                  {validationFile && (
+                    <Typography variant="body2" color="textSecondary">
+                      Selected file: {validationFile.name}
+                    </Typography>
+                  )}
+                </Grid>
+              </Grid>
+  
+              {/* Parameters File Upload second */}
+              <div className={classes.fileUpload}>
+                <Typography variant="subtitle1" gutterBottom>Parameters File</Typography>
+                <input
+                  type="file"
+                  accept=".txt"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      console.log('Parameter file selected:', file.name);
+                      setParameterFile(file);
+                    }
+                  }}
+                  className={classes.inputFile}
+                />
+                {parameterFile && (
+                  <Typography variant="body2" color="textSecondary">
+                    Selected file: {parameterFile.name}
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleParameterUpload}
+                  disabled={!parameterFile}
+                  className={classes.button}
+                >
+                  Upload and Continue
+                </Button>
+              </div>
             </div>
           )}
   
@@ -730,30 +776,29 @@ const EventForm = () => {
         </Grid>
       )}
   
-      {selectedMode && (
+      {/* Optional File Uploads - Only shown for non-forward modes */}
+      {selectedMode && selectedMode !== 'forward' && (
         <Grid container spacing={3} className={classes.fileUploads}>
-          {selectedMode !== 'forward' && (
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>Parameter Ranges File (Optional)</Typography>
-              <input
-                type="file"
-                accept=".yaml"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    console.log('Parameter ranges file selected:', file.name);
-                    setParameterRangesFile(file);
-                  }
-                }}
-                className={classes.inputFile}
-              />
-              {parameterRangesFile && (
-                <Typography variant="body2" color="textSecondary">
-                  Selected file: {parameterRangesFile.name}
-                </Typography>
-              )}
-            </Grid>
-          )}
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>Parameter Ranges File (Optional)</Typography>
+            <input
+              type="file"
+              accept=".yaml"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  console.log('Parameter ranges file selected:', file.name);
+                  setParameterRangesFile(file);
+                }
+              }}
+              className={classes.inputFile}
+            />
+            {parameterRangesFile && (
+              <Typography variant="body2" color="textSecondary">
+                Selected file: {parameterRangesFile.name}
+              </Typography>
+            )}
+          </Grid>
   
           <Grid item xs={12}>
             <Typography variant="subtitle1" gutterBottom>Validation File (Optional)</Typography>
@@ -775,7 +820,12 @@ const EventForm = () => {
       <FormNavigation
         onBack={() => setCurrentStep(1)}
         onNext={() => setCurrentStep(3)}
-        disableNext={!selectedMode || (selectedMode === 'forward' && parameterUploadType === 'manual' && !Object.values(parameters).some(val => val !== ''))}
+        disableNext={
+          !selectedMode || 
+          (selectedMode === 'forward' && parameterUploadType === 'manual' && !Object.values(parameters).some(val => val !== ''))
+        }
+        showBack={true}
+        hidden={selectedMode === 'forward' && parameterUploadType === 'upload'}
       />
     </div>
   );
