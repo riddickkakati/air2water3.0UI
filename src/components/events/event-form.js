@@ -264,6 +264,48 @@ const EventForm = () => {
           throw new Error('Failed to create PSO parameters');
         }
       }
+
+      if (selectedMode === 'latin') {
+        const latinFormData = new FormData();
+        latinFormData.append('simulation', simData.id);
+        latinFormData.append('num_samples', latinSettings.num_samples);
+      
+        const latinResponse = await fetch('http://127.0.0.1:8000/forecasting/latinparameter/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${authData.token}`
+            // Remove Content-Type header, let the browser set it for FormData
+          },
+          body: latinFormData
+        });
+      
+        if (!latinResponse.ok) {
+          const errorText = await latinResponse.text();
+          console.error('Latin Response:', errorText);
+          throw new Error('Failed to create LHS parameters');
+        }
+      }
+
+      if (selectedMode === 'monteCarlo') {
+        const monteCarloFormData = new FormData();
+        monteCarloFormData.append('simulation', simData.id);
+        monteCarloFormData.append('num_iterations', monteCarloSettings.num_iterations);
+      
+        const monteCarloResponse = await fetch('http://127.0.0.1:8000/forecasting/montecarloparameter/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${authData.token}`
+            // Remove Content-Type header, let the browser set it for FormData
+          },
+          body: monteCarloFormData
+        });
+      
+        if (!monteCarloResponse.ok) {
+          const errorText = await monteCarloResponse.text();
+          console.error('Monte Carlo Response:', errorText);
+          throw new Error('Failed to create MC parameters');
+        }
+      }
   
       const statusResponse = await fetch(`http://127.0.0.1:8000/forecasting/simulations/${simData.id}/run_simulation/`, {
         method: 'POST',
@@ -419,8 +461,43 @@ const EventForm = () => {
         </div>
       )}
 
-      {/* Similar blocks for Latin Hypercube and Monte Carlo */}
-      {/* Add those blocks here */}
+      {selectedMode === 'latin' && (
+        <div>
+          <Typography variant="subtitle1">Latin Hypercube Settings</Typography>
+          <TextField
+            label="Number of Samples"
+            value={latinSettings.num_samples}
+            onChange={(e) => setLatinSettings({...latinSettings, num_samples: e.target.value})}
+            type="number"
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setCurrentStep(3)}
+          >
+            Continue
+          </Button>
+        </div>
+      )}
+
+      {selectedMode === 'monteCarlo' && (
+        <div>
+          <Typography variant="subtitle1">Monte Carlo Settings</Typography>
+          <TextField
+            label="Number of Iterations"
+            value={monteCarloSettings.num_iterations}
+            onChange={(e) => setMonteCarloSettings({...monteCarloSettings, num_iterations: e.target.value})}
+            type="number"
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setCurrentStep(3)}
+          >
+            Continue
+          </Button>
+        </div>
+      )}
 
       <Button
         variant="contained"
