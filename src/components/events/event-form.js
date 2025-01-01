@@ -10,7 +10,8 @@ import {
   FormControlLabel,
   FormControl,
   FormLabel,
-  makeStyles
+  makeStyles,
+  Grid
 } from '@material-ui/core';
 import { useAuth } from '../../hooks/useAuth';
 import { useFetchGroup } from '../../hooks/fetch-group';
@@ -23,13 +24,39 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(2)
   },
   formControl: {
-    margin: theme.spacing(2, 0)
+    margin: theme.spacing(2, 0),
+    width: '100%'
   },
   backButton: {
     marginRight: theme.spacing(2)
   },
   inputFile: {
-    margin: theme.spacing(2, 0)
+    margin: theme.spacing(1, 0)
+  },
+  fileUploads: {
+    marginTop: theme.spacing(3)
+  },
+  modeOptions: {
+    marginTop: theme.spacing(3)
+  },
+  parameterInputs: {
+    marginTop: theme.spacing(2)
+  },
+  textField: {
+    marginBottom: theme.spacing(2)
+  },
+  navigationContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    marginTop: theme.spacing(4),
+    borderTop: `1px solid ${theme.palette.divider}`,
+    paddingTop: theme.spacing(2)
+  },
+  navigation: {
+    marginTop: theme.spacing(4)
+  },
+  fileUpload: {
+    marginTop: theme.spacing(2)
   }
 }));
 
@@ -60,6 +87,12 @@ const EventForm = () => {
   const [selectedMode, setSelectedMode] = useState('');
   const [parameterUploadType, setParameterUploadType] = useState('');
   const [parameterFile, setParameterFile] = useState(null);
+  const [parameterRangesFile, setParameterRangesFile] = useState(null);
+  const [validationFile, setValidationFile] = useState(null);
+  const [parameterRangesId, setParameterRangesId] = useState(null);
+  const [validationFileId, setValidationFileId] = useState(null);
+  const [parameterFileId, setParameterFileId] = useState(null);
+  const [parameterForwardId, setParameterForwardId] = useState(null);
   const [parameters, setParameters] = useState({
     parameter1: '', parameter2: '', parameter3: '', parameter4: '',
     parameter5: '', parameter6: '', parameter7: '', parameter8: ''
@@ -189,15 +222,146 @@ const EventForm = () => {
     }
   };
 
+  const handleParameterRangesUpload = async () => {
+    if (!parameterRangesFile || !group) {
+      console.log('No parameter ranges file or group:', { parameterRangesFile, group });
+      return null;
+    }
+  
+    const formData = new FormData();
+    formData.append('group', group.id);
+    formData.append('user', authData.user.id);
+    formData.append('file', parameterRangesFile);
+    formData.append('description', 'Parameter ranges file');
+  
+    console.log('Starting parameter ranges upload...');
+  
+    try {
+      const response = await fetch('http://127.0.0.1:8000/forecasting/parameterranges/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${authData.token}`
+        },
+        body: formData
+      });
+  
+      const responseText = await response.text();
+      console.log('Raw parameter ranges response:', responseText);
+  
+      if (!response.ok) {
+        throw new Error(`Failed to upload parameter ranges: ${responseText}`);
+      }
+  
+      const data = JSON.parse(responseText);
+      console.log('Parameter ranges upload successful. Received ID:', data.id);
+      
+      // Store the ID in state
+      setParameterRangesId(data.id);
+  
+      // Verify state update
+      console.log('Parameter ranges ID set in state:', data.id);
+      
+      return data.id;
+    } catch (error) {
+      console.error('Parameter ranges upload error:', error);
+      return null;
+    }
+  };
+
+  // Add function to handle validation file upload
+  const handleValidationFileUpload = async () => {
+    if (!validationFile || !group) return;
+
+    const formData = new FormData();
+    formData.append('file', validationFile);
+    formData.append('group', group.id);
+    formData.append('description', '');
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/forecasting/uservalidation/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${authData.token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('Failed to upload validation file');
+
+      const data = await response.json();
+      setValidationFileId(data.id);
+    } catch (error) {
+      console.error('Validation file upload error:', error);
+    }
+  };
+
+  // Add function to handle parameter forward submission
+  const handleParameterForwardSubmit = async () => {
+    if (!group) return;
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/forecasting/parameterforward/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${authData.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          group: group.id,
+          ...parameters
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to submit parameters');
+
+      const data = await response.json();
+      setParameterForwardId(data.id);
+    } catch (error) {
+      console.error('Parameter forward submission error:', error);
+    }
+  };
+
   const handleSubmitSimulation = async () => {
     if (!group || !timeseriesId) return;
   
     try {
-      // Create the simulation with just IDs
+      let currentParameterRangesId = parameterRangesId;
+      
+      // If we have a parameter ranges file and we're not in forward mode, make sure it's uploaded
+      if (parameterRangesFile && selectedMode !== 'forward') {
+        const formData = new FormData();
+        formData.append('group', group.id);
+        formData.append('user', authData.user.id);
+        formData.append('file', parameterRangesFile);
+        formData.append('description', 'Parameter ranges file');
+  
+        const response = await fetch('http://127.0.0.1:8000/forecasting/parameterranges/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${authData.token}`
+          },
+          body: formData
+        });
+  
+        if (!response.ok) {
+          throw new Error('Failed to upload parameter ranges file');
+        }
+  
+        const data = await response.json();
+        currentParameterRangesId = data.id;
+        console.log('Parameter ranges upload confirmed, ID:', currentParameterRangesId);
+      }
+  
+      // Forward mode parameter handling
+      if (selectedMode === 'forward' && parameterUploadType === 'manual') {
+        await handleParameterForwardSubmit();
+      }
+  
+      // Create simulation data with confirmed parameter ranges ID
       const simulationData = {
-        user: authData.user.id,  // Just send the ID
-        group: group.id,         // Just send the ID
-        timeseries: timeseriesId, // Just send the ID
+        user: authData.user.id,
+        group: group.id,
+        timeseries: timeseriesId,
         model: 'W',
         mode: selectedMode === 'forward' ? 'F' : 'C',
         method: 'S',
@@ -205,6 +369,10 @@ const EventForm = () => {
                   selectedMode === 'latin' ? 'L' : 
                   selectedMode === 'monteCarlo' ? 'M' : null,
         error_metric: errorMetric,
+        parameter_ranges_file: currentParameterRangesId,  // Use the confirmed ID
+        user_validation_file: validationFileId,
+        parameters_file: parameterFileId,
+        parameters_forward: parameterForwardId,
         solver: solver,
         interpolate: true,
         n_data_interpolate: 7,
@@ -222,7 +390,7 @@ const EventForm = () => {
         email_list: ''
       };
   
-      console.log('Sending simulation data:', JSON.stringify(simulationData, null, 2));
+      console.log('About to send simulation data:', JSON.stringify(simulationData, null, 2));
   
       const simResponse = await fetch('http://127.0.0.1:8000/forecasting/simulations/', {
         method: 'POST',
@@ -240,6 +408,7 @@ const EventForm = () => {
       }
   
       const simData = await simResponse.json();
+      console.log('Simulation created successfully:', simData)
   
       if (selectedMode === 'pso') {
         const psoFormData = new FormData();
@@ -331,6 +500,41 @@ const EventForm = () => {
   if (!isInGroup) return <Typography>You must be a member of this group to create an event</Typography>;
 
 
+  const FormNavigation = ({ 
+    onBack, 
+    onNext, 
+    nextLabel = "Continue",
+    showBack = true,
+    disableNext = false
+  }) => {
+    const classes = useStyles();
+    
+    return (
+      <div className={classes.navigationContainer}>
+        <div>
+          {showBack && (
+            <Button
+              variant="contained"
+              onClick={onBack}
+            >
+              Back
+            </Button>
+          )}
+        </div>
+        <div>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={onNext}
+            disabled={disableNext}
+          >
+            {nextLabel}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+  
   const renderStep1 = () => (
     <div>
       <Typography variant="h6">Step 1: Upload Time Series Data</Typography>
@@ -345,32 +549,43 @@ const EventForm = () => {
           Selected file: {timeseriesFile.name}
         </Typography>
       )}
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={uploadTimeseries}
-        disabled={!timeseriesFile}
-      >
-        Upload and Continue
-      </Button>
+      <FormNavigation
+        onNext={uploadTimeseries}
+        disableNext={!timeseriesFile}
+        showBack={false}
+        nextLabel="Upload and Continue"
+      />
     </div>
   );
-
+  
   const renderStep2 = () => (
     <div>
-      <Typography variant="h6">Step 2: Select Calibration Mode</Typography>
-      <FormControl component="fieldset">
-        <RadioGroup value={selectedMode} onChange={(e) => setSelectedMode(e.target.value)}>
+      <Typography variant="h6" gutterBottom>Step 2: Select Calibration Mode</Typography>
+      
+      <FormControl component="fieldset" className={classes.formControl}>
+        <FormLabel component="legend">Select Mode</FormLabel>
+        <RadioGroup 
+          value={selectedMode} 
+          onChange={(e) => {
+            setSelectedMode(e.target.value);
+            if (e.target.value === 'forward') {
+              setParameterRangesFile(null);
+              setParameterRangesId(null);
+            }
+          }}
+        >
           <FormControlLabel value="forward" control={<Radio />} label="Forward Mode" />
           <FormControlLabel value="pso" control={<Radio />} label="Particle Swarm Optimization" />
           <FormControlLabel value="latin" control={<Radio />} label="Latin Hypercube" />
           <FormControlLabel value="monteCarlo" control={<Radio />} label="Monte Carlo" />
         </RadioGroup>
       </FormControl>
-
+  
+      {/* Forward Mode Specific Options */}
       {selectedMode === 'forward' && (
-        <div>
-          <FormControl component="fieldset">
+        <div className={classes.modeOptions}>
+          <FormControl component="fieldset" className={classes.formControl}>
+            <FormLabel component="legend">Parameter Input Method</FormLabel>
             <RadioGroup 
               value={parameterUploadType} 
               onChange={(e) => setParameterUploadType(e.target.value)}
@@ -379,166 +594,215 @@ const EventForm = () => {
               <FormControlLabel value="manual" control={<Radio />} label="Enter Parameters Manually" />
             </RadioGroup>
           </FormControl>
-
+  
           {parameterUploadType === 'upload' && (
-            <div>
+            <div className={classes.fileUpload}>
+              <Typography variant="subtitle1" gutterBottom>Parameters File</Typography>
               <input
                 type="file"
                 accept=".txt"
                 onChange={(e) => setParameterFile(e.target.files[0])}
+                className={classes.inputFile}
               />
+              {parameterFile && (
+                <Typography variant="body2" color="textSecondary">
+                  Selected file: {parameterFile.name}
+                </Typography>
+              )}
               <Button
                 variant="contained"
                 color="primary"
                 onClick={handleParameterUpload}
                 disabled={!parameterFile}
+                className={classes.button}
               >
                 Upload Parameters
               </Button>
             </div>
           )}
-
+  
           {parameterUploadType === 'manual' && (
-            <div>
+            <Grid container spacing={2} className={classes.parameterInputs}>
               {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                <TextField
-                  key={num}
-                  label={`Parameter ${num}`}
-                  value={parameters[`parameter${num}`]}
-                  onChange={(e) => setParameters({
-                    ...parameters,
-                    [`parameter${num}`]: e.target.value
-                  })}
-                  type="number"
-                />
+                <Grid item xs={12} sm={6} md={3} key={num}>
+                  <TextField
+                    label={`Parameter ${num}`}
+                    value={parameters[`parameter${num}`]}
+                    onChange={(e) => setParameters({
+                      ...parameters,
+                      [`parameter${num}`]: e.target.value
+                    })}
+                    type="number"
+                    fullWidth
+                    className={classes.textField}
+                  />
+                </Grid>
               ))}
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => setCurrentStep(3)}
-              >
-                Continue
-              </Button>
-            </div>
+            </Grid>
           )}
         </div>
       )}
-
+  
+      {/* PSO Mode Specific Options */}
       {selectedMode === 'pso' && (
-        <div>
-          <Typography variant="subtitle1">PSO Settings</Typography>
-          <TextField
-            label="Swarm Size"
-            value={psoSettings.swarm_size}
-            onChange={(e) => setPsoSettings({...psoSettings, swarm_size: e.target.value})}
-            type="number"
-          />
-          <TextField
-            label="Phi1"
-            value={psoSettings.phi1}
-            onChange={(e) => setPsoSettings({...psoSettings, phi1: e.target.value})}
-            type="number"
-          />
-          <TextField
-            label="Phi2"
-            value={psoSettings.phi2}
-            onChange={(e) => setPsoSettings({...psoSettings, phi2: e.target.value})}
-            type="number"
-          />
-          <TextField
-            label="Max Iterations"
-            value={psoSettings.max_iterations}
-            onChange={(e) => setPsoSettings({...psoSettings, max_iterations: e.target.value})}
-            type="number"
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setCurrentStep(3)}
-          >
-            Continue
-          </Button>
-        </div>
+        <Grid container spacing={2} className={classes.modeOptions}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>PSO Settings</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Swarm Size"
+              value={psoSettings.swarm_size}
+              onChange={(e) => setPsoSettings({...psoSettings, swarm_size: e.target.value})}
+              type="number"
+              fullWidth
+              className={classes.textField}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Phi1"
+              value={psoSettings.phi1}
+              onChange={(e) => setPsoSettings({...psoSettings, phi1: e.target.value})}
+              type="number"
+              fullWidth
+              className={classes.textField}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Phi2"
+              value={psoSettings.phi2}
+              onChange={(e) => setPsoSettings({...psoSettings, phi2: e.target.value})}
+              type="number"
+              fullWidth
+              className={classes.textField}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              label="Max Iterations"
+              value={psoSettings.max_iterations}
+              onChange={(e) => setPsoSettings({...psoSettings, max_iterations: e.target.value})}
+              type="number"
+              fullWidth
+              className={classes.textField}
+            />
+          </Grid>
+        </Grid>
       )}
-
+  
+      {/* Latin Hypercube Mode Specific Options */}
       {selectedMode === 'latin' && (
-        <div>
-          <Typography variant="subtitle1">Latin Hypercube Settings</Typography>
-          <TextField
-            label="Number of Samples"
-            value={latinSettings.num_samples}
-            onChange={(e) => setLatinSettings({...latinSettings, num_samples: e.target.value})}
-            type="number"
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setCurrentStep(3)}
-          >
-            Continue
-          </Button>
-        </div>
+        <Grid container spacing={2} className={classes.modeOptions}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>Latin Hypercube Settings</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Number of Samples"
+              value={latinSettings.num_samples}
+              onChange={(e) => setLatinSettings({...latinSettings, num_samples: e.target.value})}
+              type="number"
+              fullWidth
+              className={classes.textField}
+            />
+          </Grid>
+        </Grid>
       )}
-
+  
+      {/* Monte Carlo Mode Specific Options */}
       {selectedMode === 'monteCarlo' && (
-        <div>
-          <Typography variant="subtitle1">Monte Carlo Settings</Typography>
-          <TextField
-            label="Number of Iterations"
-            value={monteCarloSettings.num_iterations}
-            onChange={(e) => setMonteCarloSettings({...monteCarloSettings, num_iterations: e.target.value})}
-            type="number"
-          />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => setCurrentStep(3)}
-          >
-            Continue
-          </Button>
-        </div>
+        <Grid container spacing={2} className={classes.modeOptions}>
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>Monte Carlo Settings</Typography>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Number of Iterations"
+              value={monteCarloSettings.num_iterations}
+              onChange={(e) => setMonteCarloSettings({...monteCarloSettings, num_iterations: e.target.value})}
+              type="number"
+              fullWidth
+              className={classes.textField}
+            />
+          </Grid>
+        </Grid>
       )}
-
-      <Button
-        variant="contained"
-        onClick={() => setCurrentStep(1)}
-      >
-        Back
-      </Button>
+  
+      {selectedMode && (
+        <Grid container spacing={3} className={classes.fileUploads}>
+          {selectedMode !== 'forward' && (
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>Parameter Ranges File (Optional)</Typography>
+              <input
+                type="file"
+                accept=".yaml"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    console.log('Parameter ranges file selected:', file.name);
+                    setParameterRangesFile(file);
+                  }
+                }}
+                className={classes.inputFile}
+              />
+              {parameterRangesFile && (
+                <Typography variant="body2" color="textSecondary">
+                  Selected file: {parameterRangesFile.name}
+                </Typography>
+              )}
+            </Grid>
+          )}
+  
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" gutterBottom>Validation File (Optional)</Typography>
+            <input
+              type="file"
+              accept=".txt"
+              onChange={(e) => setValidationFile(e.target.files[0])}
+              className={classes.inputFile}
+            />
+            {validationFile && (
+              <Typography variant="body2" color="textSecondary">
+                Selected file: {validationFile.name}
+              </Typography>
+            )}
+          </Grid>
+        </Grid>
+      )}
+  
+      <FormNavigation
+        onBack={() => setCurrentStep(1)}
+        onNext={() => setCurrentStep(3)}
+        disableNext={!selectedMode || (selectedMode === 'forward' && parameterUploadType === 'manual' && !Object.values(parameters).some(val => val !== ''))}
+      />
     </div>
   );
-
+  
   const renderStep3 = () => (
     <div>
       <Typography variant="h6">Step 3: Select Error Metric</Typography>
-      <FormControl component="fieldset">
+      <FormControl component="fieldset" className={classes.formControl}>
         <RadioGroup value={errorMetric} onChange={(e) => setErrorMetric(e.target.value)}>
           <FormControlLabel value="R" control={<Radio />} label="RMSE" />
           <FormControlLabel value="N" control={<Radio />} label="NSE" />
           <FormControlLabel value="K" control={<Radio />} label="KGE" />
         </RadioGroup>
       </FormControl>
-      <Button
-        variant="contained"
-        onClick={() => setCurrentStep(2)}
-      >
-        Back
-      </Button>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={() => setCurrentStep(4)}
-        disabled={!errorMetric}
-      >
-        Continue
-      </Button>
+  
+      <FormNavigation
+        onBack={() => setCurrentStep(2)}
+        onNext={() => setCurrentStep(4)}
+        disableNext={!errorMetric}
+      />
     </div>
   );
-
+  
   const renderStep4 = () => (
     <div>
       <Typography variant="h6">Step 4: Select Solver</Typography>
-      <FormControl component="fieldset">
+      <FormControl component="fieldset" className={classes.formControl}>
         <RadioGroup value={solver} onChange={(e) => setSolver(e.target.value)}>
           <FormControlLabel value="E" control={<Radio />} label="Euler" />
           <FormControlLabel value="T" control={<Radio />} label="Runge Kutta 2nd order" />
@@ -546,20 +810,13 @@ const EventForm = () => {
           <FormControlLabel value="C" control={<Radio />} label="Crank-Nicolson" />
         </RadioGroup>
       </FormControl>
-      <Button
-        variant="contained"
-        onClick={() => setCurrentStep(3)}
-      >
-        Back
-      </Button>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={handleSubmitSimulation}
-        disabled={!solver}
-      >
-        Run Simulation
-      </Button>
+  
+      <FormNavigation
+        onBack={() => setCurrentStep(3)}
+        onNext={handleSubmitSimulation}
+        nextLabel="Run Simulation"
+        disableNext={!solver}
+      />
     </div>
   );
 
