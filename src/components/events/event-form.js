@@ -948,6 +948,53 @@ const EventForm = () => {
               </Typography>
             )}
           </Grid>
+
+          {/* Validation Required Section */}
+          <Grid container spacing={3} className={classes.fileUploads}>
+            <Grid item xs={12}>
+              <FormControl component="fieldset" className={classes.formControl}>
+                <FormLabel component="legend">Validation Required</FormLabel>
+                <RadioGroup 
+                  value={validationRequired}  // This will now hold 'F', 'R', or 'U'
+                  onChange={(e) => {
+                    setValidationRequired(e.target.value);  // Will store 'F', 'R', or 'U'
+                    if (e.target.value === 'F') {
+                      setValidationPercent(10); // Reset percent when validation is not required
+                    }
+                  }}
+                >
+                  <FormControlLabel value="F" control={<Radio />} label="False" />
+                  <FormControlLabel value="R" control={<Radio />} label="Random Percentage" />
+                  <FormControlLabel value="U" control={<Radio />} label="Uniform Percentage" />
+                  <FormControlLabel value="N" control={<Radio />} label="Uniform Number" />
+                </RadioGroup>
+              </FormControl>
+            </Grid>
+
+            {/* Percent Input - only shown when validation required is not 'F' */}
+            {validationRequired !== 'F' && (
+              <Grid item xs={12}>
+                <TextField
+                  label="Validation Percent"
+                  type="number"
+                  value={validationPercent}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (value >= 1 && value <= 50) {
+                      setValidationPercent(value);
+                    }
+                  }}
+                  inputProps={{
+                    min: 1,
+                    max: 50
+                  }}
+                  helperText="Enter a value between 1 and 50"
+                  fullWidth
+                  className={classes.textField}
+                />
+              </Grid>
+            )}
+          </Grid>
   
           <Grid item xs={12}>
             <Typography variant="subtitle1" gutterBottom>Validation File (Optional)</Typography>
