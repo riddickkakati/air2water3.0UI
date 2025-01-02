@@ -93,6 +93,8 @@ const EventForm = () => {
   const [validationFileId, setValidationFileId] = useState(null);
   const [parameterFileId, setParameterFileId] = useState(null);
   const [parameterForwardId, setParameterForwardId] = useState(null);
+  const [validationRequired, setValidationRequired] = useState('F');
+  const [validationPercent, setValidationPercent] = useState(10);
   const [parameters, setParameters] = useState({
     parameter1: '0.021233',
     parameter2: '0.006620',
@@ -458,13 +460,14 @@ const EventForm = () => {
                 selectedMode === 'monteCarlo' ? 'M' : null,
       error_metric: errorMetric,
       parameter_ranges_file: currentParameterRangesId,
+      validation_required: validationRequired,
+      percent: validationRequired !== 'F' ? validationPercent : 10,
       user_validation_file: currentValidationId,
       parameters_file: selectedMode === 'forward' && parameterUploadType === 'upload' ? parameterFileId : null,
       parameters_forward: forwardParameterId, // Use the ID from the created forward parameters
       solver: solver,
       interpolate: true,
       n_data_interpolate: 7,
-      validation_required: false,
       core: 1,
       depth: 14.0,
       compiler: 'C',
@@ -689,6 +692,54 @@ const EventForm = () => {
               <FormControlLabel value="manual" control={<Radio />} label="Enter Parameters Manually" />
             </RadioGroup>
           </FormControl>
+
+          
+          {/* Validation Required Section */}
+          <Grid container spacing={3} className={classes.fileUploads}>
+            <Grid item xs={12}>
+              <FormControl component="fieldset" className={classes.formControl}>
+                <FormLabel component="legend">Validation Required</FormLabel>
+                <RadioGroup 
+                  value={validationRequired}  // This will now hold 'F', 'R', or 'U'
+                  onChange={(e) => {
+                    setValidationRequired(e.target.value);  // Will store 'F', 'R', or 'U'
+                    if (e.target.value === 'F') {
+                      setValidationPercent(10); // Reset percent when validation is not required
+                    }
+                  }}
+                >
+                  <FormControlLabel value="F" control={<Radio />} label="False" />
+                  <FormControlLabel value="R" control={<Radio />} label="Random Percentage" />
+                  <FormControlLabel value="U" control={<Radio />} label="Uniform Percentage" />
+                  <FormControlLabel value="N" control={<Radio />} label="Uniform Number" />
+                </RadioGroup>
+              </FormControl>
+            </Grid>
+
+            {/* Percent Input - only shown when validation required is not 'F' */}
+            {validationRequired !== 'F' && (
+              <Grid item xs={12}>
+                <TextField
+                  label="Validation Percent"
+                  type="number"
+                  value={validationPercent}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (value >= 1 && value <= 50) {
+                      setValidationPercent(value);
+                    }
+                  }}
+                  inputProps={{
+                    min: 1,
+                    max: 50
+                  }}
+                  helperText="Enter a value between 1 and 50"
+                  fullWidth
+                  className={classes.textField}
+                />
+              </Grid>
+            )}
+          </Grid>
 
           {/* Validation File Upload - shown for both upload and manual modes */}
           <Grid container spacing={3} className={classes.fileUploads}>
