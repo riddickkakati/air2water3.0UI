@@ -955,9 +955,9 @@ const EventForm = () => {
               <FormControl component="fieldset" className={classes.formControl}>
                 <FormLabel component="legend">Validation Required</FormLabel>
                 <RadioGroup 
-                  value={validationRequired}  // This will now hold 'F', 'R', or 'U'
+                  value={validationRequired}  // This will now hold 'F', 'R', 'U', or 'N'
                   onChange={(e) => {
-                    setValidationRequired(e.target.value);  // Will store 'F', 'R', or 'U'
+                    setValidationRequired(e.target.value);  // Will store 'F', 'R', 'U' or 'N'
                     if (e.target.value === 'F') {
                       setValidationPercent(10); // Reset percent when validation is not required
                     }
