@@ -94,8 +94,14 @@ const EventForm = () => {
   const [parameterFileId, setParameterFileId] = useState(null);
   const [parameterForwardId, setParameterForwardId] = useState(null);
   const [parameters, setParameters] = useState({
-    parameter1: '', parameter2: '', parameter3: '', parameter4: '',
-    parameter5: '', parameter6: '', parameter7: '', parameter8: ''
+    parameter1: '0.021233',
+    parameter2: '0.006620',
+    parameter3: '0.009015',
+    parameter4: '3.459309',
+    parameter5: '0.018934',
+    parameter6: '0.448172',
+    parameter7: '0.000000',
+    parameter8: '0.000000'
   });
   
   // Advanced settings states
@@ -324,38 +330,89 @@ const EventForm = () => {
     }
   };
 
-  // Add function to handle parameter forward submission
   const handleParameterForwardSubmit = async () => {
-    if (!group) return;
-
+    console.log('Starting handleParameterForwardSubmit');
+    console.log('Current parameters state:', parameters);
+    
+    if (!group) {
+      console.error('No group data available');
+      return null;
+    }
+  
     try {
+      // Create the parameter data object with explicit type conversion
+      const parameterData = new FormData();
+      parameterData.append('group', group.id);
+      parameterData.append('user', authData.user.id);
+      parameterData.append('parameter1', parameters.parameter1 ? parameters.parameter1 : '');
+      parameterData.append('parameter2', parameters.parameter2 ? parameters.parameter2 : '');
+      parameterData.append('parameter3', parameters.parameter3 ? parameters.parameter3 : '');
+      parameterData.append('parameter4', parameters.parameter4 ? parameters.parameter4 : '');
+      parameterData.append('parameter5', parameters.parameter5 ? parameters.parameter5 : '');
+      parameterData.append('parameter6', parameters.parameter6 ? parameters.parameter6 : '');
+      parameterData.append('parameter7', parameters.parameter7 ? parameters.parameter7 : '');
+      parameterData.append('parameter8', parameters.parameter8 ? parameters.parameter8 : '');
+  
+      console.log('Prepared parameter data for submission');
+      // Log FormData contents
+      for (let pair of parameterData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
+  
       const response = await fetch('http://127.0.0.1:8000/forecasting/parameterforward/', {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${authData.token}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Token ${authData.token}`
+          // Don't set Content-Type - browser will set it automatically with boundary for FormData
         },
-        body: JSON.stringify({
-          group: group.id,
-          ...parameters
-        })
+        body: parameterData
       });
-
-      if (!response.ok) throw new Error('Failed to submit parameters');
-
+  
+      console.log('Parameter forward response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Parameter forward submission failed:', errorText);
+        throw new Error(`Failed to submit parameters: ${errorText}`);
+      }
+  
       const data = await response.json();
+      console.log('Parameter forward submission successful:', data);
+      
       setParameterForwardId(data.id);
+      return data.id;
     } catch (error) {
       console.error('Parameter forward submission error:', error);
+      return null;
     }
   };
+  
 
   const handleSubmitSimulation = async () => {
-    if (!group || !timeseriesId) return;
-  
+    if (!group || !timeseriesId) {
+      console.error('Missing required data:', { group, timeseriesId });
+      return;
+    }
+    
+
+    let forwardParameterId = null;
+    
+    // Forward mode parameter handling
+    if (selectedMode === 'forward' && parameterUploadType === 'manual') {
+      console.log('Attempting to create forward parameters...');
+      forwardParameterId = await handleParameterForwardSubmit();
+      console.log('Received forward parameter ID:', forwardParameterId);
+      
+      if (!forwardParameterId) {
+        console.error('Failed to create forward parameters');
+        return;
+      }
+    }
+    
+    
     try {
       let currentParameterRangesId = parameterRangesId;
-      
+            
       // If we have a parameter ranges file and we're not in forward mode, make sure it's uploaded
       if (parameterRangesFile && selectedMode !== 'forward') {
         const formData = new FormData();
@@ -380,11 +437,6 @@ const EventForm = () => {
         currentParameterRangesId = data.id;
         console.log('Parameter ranges upload confirmed, ID:', currentParameterRangesId);
       }
-  
-    // Forward mode parameter handling
-    if (selectedMode === 'forward' && parameterUploadType === 'manual') {
-      await handleParameterForwardSubmit();
-    }
     
     let currentValidationId = validationFileId;
 
@@ -408,7 +460,7 @@ const EventForm = () => {
       parameter_ranges_file: currentParameterRangesId,
       user_validation_file: currentValidationId,
       parameters_file: selectedMode === 'forward' && parameterUploadType === 'upload' ? parameterFileId : null,
-      parameters_forward: selectedMode === 'forward' && parameterUploadType === 'manual' ? parameterForwardId : null,
+      parameters_forward: forwardParameterId, // Use the ID from the created forward parameters
       solver: solver,
       interpolate: true,
       n_data_interpolate: 7,
@@ -637,64 +689,62 @@ const EventForm = () => {
               <FormControlLabel value="manual" control={<Radio />} label="Enter Parameters Manually" />
             </RadioGroup>
           </FormControl>
-  
+
+          {/* Validation File Upload - shown for both upload and manual modes */}
+          <Grid container spacing={3} className={classes.fileUploads}>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1" gutterBottom>Validation File (Optional)</Typography>
+              <input
+                type="file"
+                accept=".txt"
+                onChange={(e) => setValidationFile(e.target.files[0])}
+                className={classes.inputFile}
+              />
+              {validationFile && (
+                <Typography variant="body2" color="textSecondary">
+                  Selected file: {validationFile.name}
+                </Typography>
+              )}
+            </Grid>
+          </Grid>
+
+          {/* Parameters Input Section */}
           {parameterUploadType === 'upload' && (
-            <div className={classes.modeOptions}>
-              {/* Validation File Upload first */}
-              <Grid container spacing={3} className={classes.fileUploads}>
-                <Grid item xs={12}>
-                  <Typography variant="subtitle1" gutterBottom>Validation File (Optional)</Typography>
-                  <input
-                    type="file"
-                    accept=".txt"
-                    onChange={(e) => setValidationFile(e.target.files[0])}
-                    className={classes.inputFile}
-                  />
-                  {validationFile && (
-                    <Typography variant="body2" color="textSecondary">
-                      Selected file: {validationFile.name}
-                    </Typography>
-                  )}
-                </Grid>
-              </Grid>
-  
-              {/* Parameters File Upload second */}
-              <div className={classes.fileUpload}>
-                <Typography variant="subtitle1" gutterBottom>Parameters File</Typography>
-                <input
-                  type="file"
-                  accept=".yaml"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      if (!file.name.endsWith('.yaml')) {
-                        alert('Please upload a .yaml file');
-                        return;
-                      }
-                      console.log('Parameter file selected:', file.name);
-                      setParameterFile(file);
+            <div className={classes.fileUpload}>
+              <Typography variant="subtitle1" gutterBottom>Parameters File</Typography>
+              <input
+                type="file"
+                accept=".yaml"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    if (!file.name.endsWith('.yaml')) {
+                      alert('Please upload a .yaml file');
+                      return;
                     }
-                  }}
-                  className={classes.inputFile}
-                />
-                {parameterFile && (
-                  <Typography variant="body2" color="textSecondary">
-                    Selected file: {parameterFile.name}
-                  </Typography>
-                )}
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleParameterUpload}
-                  disabled={!parameterFile}
-                  className={classes.button}
-                >
-                  Upload and Continue
-                </Button>
-              </div>
+                    console.log('Parameter file selected:', file.name);
+                    setParameterFile(file);
+                  }
+                }}
+                className={classes.inputFile}
+              />
+              {parameterFile && (
+                <Typography variant="body2" color="textSecondary">
+                  Selected file: {parameterFile.name}
+                </Typography>
+              )}
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleParameterUpload}
+                disabled={!parameterFile}
+                className={classes.button}
+              >
+                Upload and Continue
+              </Button>
             </div>
           )}
-  
+
           {parameterUploadType === 'manual' && (
             <Grid container spacing={2} className={classes.parameterInputs}>
               {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
@@ -716,7 +766,7 @@ const EventForm = () => {
           )}
         </div>
       )}
-  
+        
       {/* PSO Mode Specific Options */}
       {selectedMode === 'pso' && (
         <Grid container spacing={2} className={classes.modeOptions}>
