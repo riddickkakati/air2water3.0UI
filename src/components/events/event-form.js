@@ -84,6 +84,7 @@ const EventForm = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [timeseriesFile, setTimeseriesFile] = useState(null);
   const [timeseriesId, setTimeseriesId] = useState(null);
+  const [selectedModel, setSelectedModel] = useState('W');
   const [selectedMode, setSelectedMode] = useState('');
   const [parameterUploadType, setParameterUploadType] = useState('');
   const [parameterFile, setParameterFile] = useState(null);
@@ -452,7 +453,7 @@ const EventForm = () => {
       user: authData.user.id,
       group: group.id,
       timeseries: timeseriesId,
-      model: 'W',
+      model: selectedModel,
       mode: selectedMode === 'forward' ? 'F' : 'C',
       method: 'S',
       optimizer: selectedMode === 'pso' ? 'P' : 
@@ -633,7 +634,20 @@ const EventForm = () => {
   
   const renderStep1 = () => (
     <div>
-      <Typography variant="h6">Step 1: Upload Time Series Data</Typography>
+      <Typography variant="h6">Step 1: Choose model and upload input time series data</Typography>
+      
+      {/* Add model selection */}
+      <FormControl component="fieldset" className={classes.formControl}>
+        <FormLabel component="legend">Select Model</FormLabel>
+        <RadioGroup 
+          value={selectedModel}
+          onChange={(e) => setSelectedModel(e.target.value)}
+        >
+          <FormControlLabel value="W" control={<Radio />} label="Air2water" />
+          <FormControlLabel value="S" control={<Radio />} label="Air2stream" />
+        </RadioGroup>
+      </FormControl>
+      
       <input
         type="file"
         accept=".txt"
