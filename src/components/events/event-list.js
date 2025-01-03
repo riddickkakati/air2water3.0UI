@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { 
   Typography, 
@@ -76,11 +76,14 @@ export default function EventList() {
         if (response.ok) {
           const data = await response.json();
           setSimulations(data);
-          // Get the highest simulation ID as user count
           if (data.length > 0) {
             const maxId = Math.max(...data.map(sim => sim.id));
             setUserCount(maxId);
           }
+          // Initially fetch status for all simulations
+          data.forEach(simulation => {
+            fetchSimulationStatus(simulation.id);
+          });
         }
       } catch (error) {
         console.error('Error fetching simulations:', error);
@@ -91,36 +94,59 @@ export default function EventList() {
     fetchSimulations();
   }, [authData.token]);
 
-  // Fetch status for each simulation
-  useEffect(() => {
-    const fetchSimulationStatus = async (simulationId) => {
-      try {
-        const response = await fetch(
-          `http://127.0.0.1:8000/forecasting/simulations/${simulationId}/check_status/`,
-          {
-            headers: {
-              'Authorization': `Token ${authData.token}`
-            }
+  // Function to fetch simulation status
+  const fetchSimulationStatus = async (simulationId) => {
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/forecasting/simulations/${simulationId}/check_status/`,
+        {
+          headers: {
+            'Authorization': `Token ${authData.token}`
           }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setSimulationResults(prev => ({
-            ...prev,
-            [simulationId]: data
-          }));
         }
-      } catch (error) {
-        console.error('Error fetching simulation status:', error);
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSimulationResults(prev => ({
+          ...prev,
+          [simulationId]: data
+        }));
+        return data.status;
       }
+    } catch (error) {
+      console.error('Error fetching simulation status:', error);
+    }
+    return null;
+  };
+
+  // Set up polling for pending simulations
+  useEffect(() => {
+    const intervals = {};
+
+    // Function to start polling for a specific simulation
+    const startPolling = (simulationId) => {
+      intervals[simulationId] = setInterval(async () => {
+        const status = await fetchSimulationStatus(simulationId);
+        if (status === 'completed' || status === 'failed') {
+          clearInterval(intervals[simulationId]);
+          delete intervals[simulationId];
+        }
+      }, 5000);
     };
 
-    if (simulations.length > 0) {
-      simulations.forEach(simulation => {
-        fetchSimulationStatus(simulation.id);
-      });
-    }
-  }, [simulations, authData.token]);
+    // Start polling for each pending simulation
+    simulations.forEach(simulation => {
+      const currentStatus = simulationResults[simulation.id]?.status;
+      if (currentStatus === 'pending' || currentStatus === 'running') {
+        startPolling(simulation.id);
+      }
+    });
+
+    // Cleanup function
+    return () => {
+      Object.values(intervals).forEach(interval => clearInterval(interval));
+    };
+  }, [simulations, simulationResults]);
 
   if (loading) {
     return <LinearProgress />;
@@ -180,7 +206,7 @@ export default function EventList() {
                   </Grid>
                 )}
 
-            {results.validation_plot_path && (
+                {results.validation_plot_path && (
                   <Grid item xs={12} sm={6}>
                     <Button
                       variant="contained"
@@ -269,7 +295,6 @@ export default function EventList() {
                     </Button>
                   </Grid>
                 )}
-
               </Grid>
             )}
 
