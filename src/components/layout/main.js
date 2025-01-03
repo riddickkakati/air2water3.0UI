@@ -2,12 +2,16 @@ import React from 'react';
 import { Switch, Route, Redirect } from 'react-router-dom'
 import GroupList from '../forecasting-group/group-list';
 import GroupDetails from '../forecasting-group/group-details';
+import GroupList2 from '../monitoring-group/group-list';
+import GroupDetails2 from '../monitoring-group/group-details';
 import Register from '../user/register';
 import Account from '../user/account';
 import EventForm from '../forecasting-events/event-form';
+import EventForm2 from '../monitoring-events/event-form';
 import { useAuth } from '../../hooks/useAuth';
 import { Link, useHistory } from 'react-router-dom';
 import MakeGroup from '../forecasting-group/group-form';
+import MakeGroup2 from '../monitoring-group/group-form';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 
 
@@ -24,12 +28,24 @@ function Main() {
             return '/forecasting/';
         case '/forecasting/event-form':
             return '/forecasting/';
+        case '/monitoring/':
+              return '/';
+        case '/monitoring/group-form':
+              return '/monitoring/';
+        case '/monitoring/event-form':
+              return '/monitoring/';
         default:
             if (pathname.startsWith('/forecasting/groups/')) {
                 return '/forecasting/';
             }
             if (pathname.startsWith('/forecasting/event/')) {
                 return '/forecasting/';
+            }
+            if (pathname.startsWith('/monitoring/groups/')) {
+              return '/monitoring/';
+            }
+            if (pathname.startsWith('/monitoring/event/')) {
+                return '/monitoring/';
             }
             return '/';
     }
@@ -50,7 +66,9 @@ function Main() {
           {authData ? (
             <>
               <Link to={'/forecasting/'}>Forecasting</Link>
-              <h2>Monitoring Link</h2>
+              <br/>
+              <br/>
+              <Link to={'/monitoring/'}>Monitoring</Link>
             </>
           ) : (
             <Redirect to="/register" />
@@ -64,15 +82,28 @@ function Main() {
               <Link to={'/forecasting/group-form'}>Create Group</Link>
               <GroupList />
           </Route>
+          <Route exact path="/monitoring/">
+              <Link to={'/monitoring/group-form'}>Create Group</Link>
+              <GroupList2 />
+          </Route>
           <Route path="/forecasting/group-form">
               <MakeGroup />
+          </Route>
+          <Route path="/monitoring/group-form">
+              <MakeGroup2 />
           </Route>
           
           <Route path="/forecasting/groups/:id">
               <GroupDetails />
           </Route>
+          <Route path="/monitoring/groups/:id">
+              <GroupDetails2 />
+          </Route>
           <Route path="/forecasting/event-form">
               <EventForm />
+          </Route>
+          <Route path="/monitoring/event-form">
+              <EventForm2 />
           </Route>
           <Route path="/account">
             <Account/>

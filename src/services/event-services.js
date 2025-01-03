@@ -13,6 +13,18 @@ export function getEvent(token, id) {
   .catch(e => {console.log(e)});
 }
 
+export function getEvent2(token, id) {
+  return fetch(`http://127.0.0.1:8000/monitoring/compute/${id}/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`
+    },
+  })
+  .then(status)
+  .catch(e => {console.log(e)});
+}
+
 // File upload functions
 export function uploadTimeseriesFile(token, fileData) {
   return fetch('http://127.0.0.1:8000/forecasting/timeseries/', {
@@ -80,6 +92,19 @@ export function createSimulation(token, simulationData) {
   .catch(e => {console.log(e)});
 }
 
+export function createSimulation2(token, simulationData) {
+  return fetch('http://127.0.0.1:8000/monitoring/compute/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`
+    },
+    body: JSON.stringify(simulationData)
+  })
+  .then(status)
+  .catch(e => {console.log(e)});
+}
+
 export function runSimulation(token, simulationId) {
   return fetch(`http://127.0.0.1:8000/forecasting/simulations/${simulationId}/run_simulation/`, {
     method: 'POST',
@@ -92,8 +117,32 @@ export function runSimulation(token, simulationId) {
   .catch(e => {console.log(e)});
 }
 
+export function runSimulation2(token, simulationId) {
+  return fetch(`http://127.0.0.1:8000/monitoring/compute/${simulationId}/run_monitoring/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`
+    }
+  })
+  .then(status)
+  .catch(e => {console.log(e)});
+}
+
 export function checkSimulationStatus(token, simulationId) {
   return fetch(`http://127.0.0.1:8000/forecasting/simulations/${simulationId}/check_status/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`
+    }
+  })
+  .then(status)
+  .catch(e => {console.log(e)});
+}
+
+export function checkSimulationStatus2(token, simulationId) {
+  return fetch(`http://127.0.0.1:8000/monitoring/compute/${simulationId}/check_status/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
