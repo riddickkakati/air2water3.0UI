@@ -1,13 +1,13 @@
 import React from 'react';
 import { Switch, Route, Redirect } from 'react-router-dom'
-import GroupList from '../group/group-list';
-import GroupDetails from '../group/group-details';
+import GroupList from '../forecasting-group/group-list';
+import GroupDetails from '../forecasting-group/group-details';
 import Register from '../user/register';
 import Account from '../user/account';
-import EventForm from '../events/event-form';
+import EventForm from '../forecasting-events/event-form';
 import { useAuth } from '../../hooks/useAuth';
 import { Link, useHistory } from 'react-router-dom';
-import MakeGroup from '../group/group-form';
+import MakeGroup from '../forecasting-group/group-form';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 
 

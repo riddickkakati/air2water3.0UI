@@ -6,8 +6,8 @@ import User from '../user/user';
 import { Button } from '@material-ui/core';
 import { joinGroup, leaveGroup, createGroup } from '../../services/group-services';
 import { useAuth } from '../../hooks/useAuth';
-import Comments from '../comments/comments';
-import EventList from '../events/event-list';
+import Comments from '../forecasting-comments/comments';
+import EventList from '../forecasting-events/event-list';
 import EmojiEventsIcon from '@material-ui/icons/EmojiEvents';
 
 
