@@ -1,22 +1,25 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { 
   Typography, 
   Button, 
   LinearProgress, 
-  Grid 
+  Grid,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton
 } from '@material-ui/core';
 import { useAuth } from '../../hooks/useAuth';
-import TimelineIcon from '@material-ui/icons/Timeline';
-import ScatterPlotIcon from '@material-ui/icons/ScatterPlot';
-import BarChartIcon from '@material-ui/icons/BarChart';
+import MapIcon from '@material-ui/icons/Map';
 import GetAppIcon from '@material-ui/icons/GetApp';
+import CloseIcon from '@material-ui/icons/Close';
 
 const useStyles = makeStyles(theme => ({
   root: {
     marginTop: theme.spacing(2)
   },
-  simulation: {
+  monitoring: {
     marginBottom: theme.spacing(4),
     padding: theme.spacing(2)
   },
@@ -27,16 +30,11 @@ const useStyles = makeStyles(theme => ({
   resultsSection: {
     marginTop: theme.spacing(2)
   },
-  userCount: {
-    marginTop: theme.spacing(4),
-    textAlign: 'center',
-    color: '#fff'
-  },
-  simulationTitle: {
+  monitoringTitle: {
     color: '#fff',
     fontWeight: 500
   },
-  simulationInfo: {
+  monitoringInfo: {
     color: '#fff',
     marginBottom: theme.spacing(2)
   },
@@ -52,22 +50,47 @@ const useStyles = makeStyles(theme => ({
   },
   statusFailed: {
     color: '#d32f2f'  // Red
+  },
+  dialogTitle: {
+    margin: 0,
+    padding: theme.spacing(2),
+  },
+  closeButton: {
+    position: 'absolute',
+    right: theme.spacing(1),
+    top: theme.spacing(1),
+    color: theme.palette.grey[500],
+  },
+  mapDialog: {
+    '& .MuiDialog-paper': {
+      maxWidth: '90vw',
+      maxHeight: '90vh',
+    },
+  },
+  mapContainer: {
+    width: '100%',
+    height: '70vh',
+    '& iframe': {
+      width: '100%',
+      height: '100%',
+      border: 'none'
+    }
   }
 }));
 
 export default function EventList() {
   const classes = useStyles();
   const { authData } = useAuth();
-  const [simulations, setSimulations] = useState([]);
-  const [simulationResults, setSimulationResults] = useState({});
+  const [monitoringRuns, setMonitoringRuns] = useState([]);
+  const [monitoringResults, setMonitoringResults] = useState({});
   const [loading, setLoading] = useState(true);
-  const [userCount, setUserCount] = useState(0);
+  const [selectedMap, setSelectedMap] = useState(null);
+  const [mapDialogOpen, setMapDialogOpen] = useState(false);
 
-  // Fetch simulations and calculate user count
   useEffect(() => {
-    const fetchSimulations = async () => {
+    const fetchMonitoringRuns = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/forecasting/simulations/', {
+        const response = await fetch('http://127.0.0.1:8000/monitoring/compute/', {
           headers: {
             'Authorization': `Token ${authData.token}`
           }
@@ -75,30 +98,24 @@ export default function EventList() {
         
         if (response.ok) {
           const data = await response.json();
-          setSimulations(data);
-          if (data.length > 0) {
-            const maxId = Math.max(...data.map(sim => sim.id));
-            setUserCount(maxId);
-          }
-          // Initially fetch status for all simulations
-          data.forEach(simulation => {
-            fetchSimulationStatus(simulation.id);
+          setMonitoringRuns(data);
+          data.forEach(monitoring => {
+            fetchMonitoringStatus(monitoring.id);
           });
         }
       } catch (error) {
-        console.error('Error fetching simulations:', error);
+        console.error('Error fetching monitoring runs:', error);
       }
       setLoading(false);
     };
 
-    fetchSimulations();
+    fetchMonitoringRuns();
   }, [authData.token]);
 
-  // Function to fetch simulation status
-  const fetchSimulationStatus = async (simulationId) => {
+  const fetchMonitoringStatus = async (monitoringId) => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/forecasting/simulations/${simulationId}/check_status/`,
+        `http://127.0.0.1:8000/monitoring/compute/${monitoringId}/check_status/`,
         {
           headers: {
             'Authorization': `Token ${authData.token}`
@@ -107,64 +124,86 @@ export default function EventList() {
       );
       if (response.ok) {
         const data = await response.json();
-        setSimulationResults(prev => ({
+        setMonitoringResults(prev => ({
           ...prev,
-          [simulationId]: data
+          [monitoringId]: data
         }));
         return data.status;
       }
     } catch (error) {
-      console.error('Error fetching simulation status:', error);
+      console.error('Error fetching monitoring status:', error);
     }
     return null;
   };
 
-  // Set up polling for pending simulations
   useEffect(() => {
     const intervals = {};
 
-    // Function to start polling for a specific simulation
-    const startPolling = (simulationId) => {
-      intervals[simulationId] = setInterval(async () => {
-        const status = await fetchSimulationStatus(simulationId);
+    const startPolling = (monitoringId) => {
+      intervals[monitoringId] = setInterval(async () => {
+        const status = await fetchMonitoringStatus(monitoringId);
         if (status === 'completed' || status === 'failed') {
-          clearInterval(intervals[simulationId]);
-          delete intervals[simulationId];
+          clearInterval(intervals[monitoringId]);
+          delete intervals[monitoringId];
         }
       }, 5000);
     };
 
-    // Start polling for each pending simulation
-    simulations.forEach(simulation => {
-      const currentStatus = simulationResults[simulation.id]?.status;
+    monitoringRuns.forEach(monitoring => {
+      const currentStatus = monitoringResults[monitoring.id]?.status;
       if (currentStatus === 'pending' || currentStatus === 'running') {
-        startPolling(simulation.id);
+        startPolling(monitoring.id);
       }
     });
 
-    // Cleanup function
     return () => {
       Object.values(intervals).forEach(interval => clearInterval(interval));
     };
-  }, [simulations, simulationResults]);
+  }, [monitoringRuns, monitoringResults]);
+
+  const handleMapClick = (htmlContent) => {
+    setSelectedMap(htmlContent);
+    setMapDialogOpen(true);
+  };
+
+  const handleCloseMap = () => {
+    setMapDialogOpen(false);
+    setSelectedMap(null);
+  };
 
   if (loading) {
     return <LinearProgress />;
   }
 
+  const getParameterName = (param) => {
+    switch(param) {
+      case 'C': return 'CHLA';
+      case 'T': return 'TURBIDITY';
+      case 'D': return 'DO';
+      default: return param;
+    }
+  };
+
+  const getSatelliteName = (sat) => {
+    switch(sat) {
+      case 'L': return 'Landsat';
+      case 'S': return 'Sentinel';
+      default: return sat;
+    }
+  };
+
   return (
     <div className={classes.root}>
-      <Typography variant="h5" gutterBottom className={classes.simulationTitle}>
-        Simulations
+      <Typography variant="h5" gutterBottom className={classes.monitoringTitle}>
+        Monitoring Runs
       </Typography>
 
-      {simulations.map(simulation => {
-        const results = simulationResults[simulation.id];
+      {monitoringRuns.map(monitoring => {
+        const results = monitoringResults[monitoring.id];
         return (
-          <div key={simulation.id} className={classes.simulation}>
-            <Typography variant="h6" gutterBottom className={classes.simulationTitle}>
-              Simulation #{simulation.id}
-              {simulation.model && ` - ${simulation.model === 'W' ? 'Air2water' : 'Air2stream'}`}
+          <div key={monitoring.id} className={classes.monitoring}>
+            <Typography variant="h6" gutterBottom className={classes.monitoringTitle}>
+              Monitoring Run #{monitoring.id}
             </Typography>
 
             {results && (
@@ -180,118 +219,43 @@ export default function EventList() {
               </Typography>
             )}
 
-            <Typography variant="body1" className={classes.simulationInfo}>
-              Mode: {simulation.mode === 'F' ? 'Forward' : 'Calibration'}
-              {simulation.optimizer && ` - ${
-                simulation.optimizer === 'P' ? 'PSO' : 
-                simulation.optimizer === 'L' ? 'Latin Hypercube' : 
-                'Monte Carlo'
-              }`}
+            <Typography variant="body1" className={classes.monitoringInfo}>
+              Parameter: {getParameterName(monitoring.parameter)}
+              <br />
+              Satellite: {getSatelliteName(monitoring.satellite)}
+              <br />
+              Date Range: {new Date(monitoring.start_date).toLocaleDateString()} - {new Date(monitoring.end_date).toLocaleDateString()}
+              <br />
+              Location: {monitoring.latitude}°N, {monitoring.longitude}°E
             </Typography>
 
             {results && results.status === 'completed' && (
               <Grid container spacing={2}>
-                {results.calibration_plot_path && (
+                {results.map_html && (
                   <Grid item xs={12} sm={6}>
                     <Button
                       variant="contained"
                       color="primary"
                       className={classes.downloadButton}
-                      href={results.calibration_plot_path}
-                      target="_blank"
-                      startIcon={<TimelineIcon />}
+                      onClick={() => handleMapClick(results.map_html)}
+                      startIcon={<MapIcon />}
                     >
-                      View calibration results plot
+                      View Interactive Map
                     </Button>
                   </Grid>
                 )}
 
-                {results.validation_plot_path && (
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      className={classes.downloadButton}
-                      href={results.validation_plot_path}
-                      target="_blank"
-                      startIcon={<TimelineIcon />}
-                    >
-                      View validation results plot
-                    </Button>
-                  </Grid>
-                )}
-
-                {results.dotty_plots && simulation.mode !== 'F' && (
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      className={classes.downloadButton}
-                      href={results.dotty_plots}
-                      target="_blank"
-                      startIcon={<ScatterPlotIcon />}
-                    >
-                      View Dotty Plots
-                    </Button>
-                  </Grid>
-                )}
-
-                {results.obj_function_path && simulation.mode !== 'F' && (
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      className={classes.downloadButton}
-                      href={results.obj_function_path}
-                      target="_blank"
-                      startIcon={<BarChartIcon />}
-                    >
-                      View Objective Function
-                    </Button>
-                  </Grid>
-                )}
-
-                {results.parameter_convergence && simulation.mode !== 'F' && (
+                {results.map_download && (
                   <Grid item xs={12} sm={6}>
                     <Button
                       variant="contained"
                       color="secondary"
                       className={classes.downloadButton}
-                      href={results.parameter_convergence}
+                      href={results.map_download}
                       download
                       startIcon={<GetAppIcon />}
                     >
-                      Download Parameter Convergence
-                    </Button>
-                  </Grid>
-                )}
-
-                {results.calibration_timeseries_path && (
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      className={classes.downloadButton}
-                      href={results.calibration_timeseries_path}
-                      download
-                      startIcon={<GetAppIcon />}
-                    >
-                      Download calibration results CSV
-                    </Button>
-                  </Grid>
-                )}
-
-                {results.validation_timeseries_path && (
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      className={classes.downloadButton}
-                      href={results.validation_timeseries_path}
-                      download
-                      startIcon={<GetAppIcon />}
-                    >
-                      Download validation results CSV
+                      Download Map Image
                     </Button>
                   </Grid>
                 )}
@@ -311,17 +275,38 @@ export default function EventList() {
         );
       })}
 
-      {simulations.length === 0 && (
-        <Typography variant="body1" className={classes.simulationInfo}>
-          No simulations found.
+      {monitoringRuns.length === 0 && (
+        <Typography variant="body1" className={classes.monitoringInfo}>
+          No monitoring runs found.
         </Typography>
       )}
 
-      {simulations.length > 0 && (
-        <Typography variant="h6" className={classes.userCount}>
-          There are {userCount} users of air2water3.0 forecast
-        </Typography>
-      )}
+      {/* Map Dialog */}
+      <Dialog
+        open={mapDialogOpen}
+        onClose={handleCloseMap}
+        maxWidth="lg"
+        fullWidth
+        className={classes.mapDialog}
+      >
+        <DialogTitle disableTypography className={classes.dialogTitle}>
+          <Typography variant="h6">Interactive Map</Typography>
+          <IconButton className={classes.closeButton} onClick={handleCloseMap}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <div className={classes.mapContainer}>
+            {selectedMap && (
+              <iframe
+                srcDoc={selectedMap}
+                title="Interactive Map"
+                sandbox="allow-same-origin allow-scripts"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
