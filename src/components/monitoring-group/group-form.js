@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import { Button, Grid, TextField } from '@material-ui/core';
 import AccountCircleIcon from '@material-ui/icons/AccountCircle';
@@ -14,21 +14,30 @@ function MakeGroup2() {
     const [location, setLocation] = useState('');
     const [description, setDescription] = useState('');
 
+    // Add this useEffect to check auth state
+    useEffect(() => {
+        console.log('Current authData:', authData);
+    }, [authData]);
+
     const handleSubmit = async e => {
         e.preventDefault();
         try {
+            if (!authData || !authData.token) {
+                console.error('No authentication token available');
+                return;
+            }
+            console.log('Using token:', authData.token);
             const dataToSend = {name, location, description};
             const regData = await createGroup2(authData.token, dataToSend);
+            console.log('Create group response:', regData);
             if (regData) {
-                const joinGrp = await joinGroup2({user: authData.user.id, group: regData.id, admin: true});
-                history.push('/forecasting');
+                const joinGrp2 = await joinGroup2({user: authData.user.id, group: regData.id, admin: true});
+                history.push('/monitoring');
             }
         } catch (error) {
-            console.error('Error creating group:', error);
-            // Add user feedback here if needed
+            console.error('Error details:', error);
         }
     };
-
     return (
         <div>
             <Link to={'/monitoring'}>Back</Link>

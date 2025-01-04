@@ -34,7 +34,7 @@ const useStyles = makeStyles( theme => ({
     }
 }));
 
-function GroupDetails() {
+function GroupDetails2() {
     const classes = useStyles();
     const { authData } = useAuth();
     const { id } = useParams();
@@ -54,7 +54,7 @@ function GroupDetails() {
                 if(indx === 0){
                     m.trophy = availableTrophies[currentTrophy];
                 } else {
-                    if(m.points !== data.forecasting_members[indx -1].points){
+                    if(m.points !== data.monitoring_members[indx -1].points){
                         currentTrophy++;
                     }
                     if(currentTrophy < availableTrophies.length){
@@ -143,4 +143,4 @@ function GroupDetails() {
     );
 }
 
-export default GroupDetails;
+export default GroupDetails2;

@@ -34,16 +34,28 @@ export function createGroup(token, userData){
 }
 
 export function createGroup2(token, userData){
+  console.log('Making request with token:', token);
   return fetch(`http://127.0.0.1:8000/monitoring/groups/`, {
       method: 'POST',
       headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Token ${token}`
+          'Authorization': `Token ${token}` // Make sure there's a space after "Token"
       },
-      body: JSON.stringify(userData)  // Remove the extra {} wrapping
+      body: JSON.stringify(userData)
   })
-  .then(status)
-  .catch(e => {console.log(e)})
+  .then(async response => {
+    if (!response.ok) {
+      // Get the error message from the response
+      const errorData = await response.json();
+      console.log('Error response:', errorData);
+      throw new Error(errorData.detail || 'Request failed');
+    }
+    return response.json();
+  })
+  .catch(e => {
+    console.error('Full error:', e);
+    throw e;
+  })
 }
 
 export function joinGroup(data){
