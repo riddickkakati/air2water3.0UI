@@ -10,7 +10,6 @@ import Comments from '../monitoring-comments/comments';
 import EventList from '../monitoring-events/event-list';
 import EmojiEventsIcon from '@material-ui/icons/EmojiEvents';
 
-
 const useStyles = makeStyles( theme => ({
     dateTime: {
         fontSize: '18px',
@@ -53,24 +52,30 @@ function GroupDetails2() {
         }
         setGroup(data);
     }, [data, authData]);
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleString();
+      };
     
-        const joinHere = () => {
-            joinGroup2({user: authData.user.id, group: group.id}).then(
-                res => { 
-                    console.log(res);
-                    refetch();  // Refetch group data after joining
-                }
-            );
-        };
     
-        const leaveHere = () => {
-            leaveGroup2({user: authData.user.id, group: group.id}).then(
-                res => { 
-                    console.log(res);
-                    refetch();  // Refetch group data after leaving
-                }
-            );
-        };
+    const joinHere = () => {
+        joinGroup2({user: authData.user.id, group: group.id}).then(
+            res => { 
+                console.log(res);
+                refetch();  // Refetch group data after joining
+            }
+        );
+    };
+
+    const leaveHere = () => {
+        leaveGroup2({user: authData.user.id, group: group.id}).then(
+            res => { 
+                console.log(res);
+                refetch();  // Refetch group data after leaving
+            }
+        );
+    };
 
     const addEvent = () => {
         history.push('/monitoring/event-form', {group})
@@ -90,7 +95,7 @@ function GroupDetails2() {
                 <h2>
                     {group.monitoring_members &&
                         group.monitoring_members
-                        .find(member => member.admin)?.user.username || 'No Admin'} created this group on {group.time}
+                        .find(member => member.admin)?.user.username || 'No Admin'} created this group on {formatDate(group.time)}
                     </h2>
 
                 <Link to={'/monitoring/group-form'}>Create Group</Link>
@@ -115,7 +120,7 @@ function GroupDetails2() {
 
                     return <div key={member.id} className={classes.memberContainer}>
                         <User user={member.user}/>
-                        <p>{member.time}</p>
+                        <p>{formatDate(member.time)}</p>
                     </div>
                 })}
                 

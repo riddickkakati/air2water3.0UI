@@ -1,312 +1,360 @@
 import React, { useState, useEffect } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { 
-  Typography, 
-  Button, 
-  LinearProgress, 
+import {
+  Typography,
+  Button,
+  LinearProgress,
   Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Chip,
+  IconButton,
+  Paper,
   Dialog,
-  DialogContent,
   DialogTitle,
-  IconButton
+  DialogContent,
+  DialogActions
 } from '@material-ui/core';
-import { useAuth } from '../../hooks/useAuth';
-import MapIcon from '@material-ui/icons/Map';
 import GetAppIcon from '@material-ui/icons/GetApp';
+import AssessmentIcon from '@material-ui/icons/Assessment';
+import ErrorIcon from '@material-ui/icons/Error';
 import CloseIcon from '@material-ui/icons/Close';
+import { useAuth } from '../../hooks/useAuth';
+import { checkSimulationStatus3 } from '../../services/event-services';
 
 const useStyles = makeStyles(theme => ({
   root: {
     marginTop: theme.spacing(2)
   },
-  monitoring: {
-    marginBottom: theme.spacing(4),
-    padding: theme.spacing(2)
+  card: {
+    marginBottom: theme.spacing(2),
+    position: 'relative'
   },
-  downloadButton: {
-    margin: theme.spacing(1),
-    width: '100%'
+  statusChip: {
+    position: 'absolute',
+    top: theme.spacing(2),
+    right: theme.spacing(2)
+  },
+  title: {
+    marginBottom: theme.spacing(2)
+  },
+  infoGrid: {
+    marginBottom: theme.spacing(2)
   },
   resultsSection: {
     marginTop: theme.spacing(2)
   },
-  monitoringTitle: {
-    color: '#fff',
-    fontWeight: 500
-  },
-  monitoringInfo: {
-    color: '#fff',
-    marginBottom: theme.spacing(2)
-  },
-  status: {
-    fontWeight: 500,
+  metric: {
     marginBottom: theme.spacing(1)
   },
-  statusPending: {
-    color: '#f57c00'  // Orange
-  },
-  statusCompleted: {
-    color: '#2e7d32'  // Green
-  },
-  statusFailed: {
-    color: '#d32f2f'  // Red
+  error: {
+    color: theme.palette.error.main,
+    marginTop: theme.spacing(1)
   },
   dialogTitle: {
-    margin: 0,
-    padding: theme.spacing(2),
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
-  closeButton: {
-    position: 'absolute',
-    right: theme.spacing(1),
-    top: theme.spacing(1),
-    color: theme.palette.grey[500],
+  modelTypeChip: {
+    marginRight: theme.spacing(1)
   },
-  mapDialog: {
-    '& .MuiDialog-paper': {
-      maxWidth: '90vw',
-      maxHeight: '90vh',
-    },
-  },
-  mapContainer: {
-    width: '100%',
-    height: '70vh',
-    '& iframe': {
-      width: '100%',
-      height: '100%',
-      border: 'none'
-    }
+  progressContainer: {
+    marginTop: theme.spacing(2)
   }
 }));
 
-export default function EventList() {
+const EventList = () => {
   const classes = useStyles();
   const { authData } = useAuth();
-  const [monitoringRuns, setMonitoringRuns] = useState([]);
-  const [monitoringResults, setMonitoringResults] = useState({});
+  const [mlRuns, setMlRuns] = useState([]);
+  const [runStatus, setRunStatus] = useState({}); // Store status and download links for each run
   const [loading, setLoading] = useState(true);
-  const [selectedMap, setSelectedMap] = useState(null);
-  const [mapDialogOpen, setMapDialogOpen] = useState(false);
+  const [selectedResults, setSelectedResults] = useState(null);
+  const [resultsDialogOpen, setResultsDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchMonitoringRuns = async () => {
-      try {
-        const response = await fetch('http://127.0.0.1:8000/monitoring/compute/', {
-          headers: {
-            'Authorization': `Token ${authData.token}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setMonitoringRuns(data);
-          data.forEach(monitoring => {
-            fetchMonitoringStatus(monitoring.id);
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching monitoring runs:', error);
-      }
-      setLoading(false);
-    };
+    fetchMLRuns();
+  }, []);
 
-    fetchMonitoringRuns();
-  }, [authData.token]);
+  // Separate effect for polling
+  useEffect(() => {
+    const pollInterval = setInterval(updateRunningAnalyses, 5000);
+    return () => clearInterval(pollInterval);
+  }, [mlRuns]); // Depend on mlRuns to restart polling when runs change
 
-  const fetchMonitoringStatus = async (monitoringId) => {
+  const fetchMLRuns = async () => {
     try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/monitoring/compute/${monitoringId}/check_status/`,
-        {
-          headers: {
-            'Authorization': `Token ${authData.token}`
-          }
+      const response = await fetch('http://127.0.0.1:8000/machinelearning/ml_analysis/', {
+        headers: {
+          'Authorization': `Token ${authData.token}`
         }
-      );
+      });
       if (response.ok) {
         const data = await response.json();
-        setMonitoringResults(prev => ({
-          ...prev,
-          [monitoringId]: data
-        }));
-        return data.status;
+        setMlRuns(data);
+        // Initialize status tracking for each run
+        const initialStatus = {};
+        data.forEach(run => {
+          initialStatus[run.id] = {
+            status: run.status,
+            downloadLinks: null,
+            results: null
+          };
+        });
+        setRunStatus(initialStatus);
       }
     } catch (error) {
-      console.error('Error fetching monitoring status:', error);
+      console.error('Error fetching ML runs:', error);
     }
-    return null;
+    setLoading(false);
   };
 
-  useEffect(() => {
-    const intervals = {};
+  const updateRunningAnalyses = async () => {
+    const pendingRuns = mlRuns.filter(run => 
+      run.status === 'running' || run.status === 'pending' || 
+      (run.status === 'completed' && !runStatus[run.id]?.downloadLinks)
+    );
 
-    const startPolling = (monitoringId) => {
-      intervals[monitoringId] = setInterval(async () => {
-        const status = await fetchMonitoringStatus(monitoringId);
-        if (status === 'completed' || status === 'failed') {
-          clearInterval(intervals[monitoringId]);
-          delete intervals[monitoringId];
+    if (pendingRuns.length === 0) return;
+
+    await Promise.all(
+      pendingRuns.map(async run => {
+        try {
+          const response = await checkSimulationStatus3(authData.token, run.id);
+          
+          if (response.status !== runStatus[run.id]?.status || 
+              response.status === 'completed' && !runStatus[run.id]?.downloadLinks) {
+            
+            setRunStatus(prev => ({
+              ...prev,
+              [run.id]: {
+                status: response.status,
+                downloadLinks: response.status === 'completed' ? {
+                  resultsZip: response.results_zip,
+                  resultsYaml: response.results_yaml
+                } : null,
+                results: response.status === 'completed' ? {
+                  analysis_summary: response.analysis_summary,
+                  best_model: response.best_model,
+                  total_time: response.total_time
+                } : null
+              }
+            }));
+
+            // Update the run in mlRuns
+            setMlRuns(prev => 
+              prev.map(prevRun => 
+                prevRun.id === run.id 
+                  ? { ...prevRun, status: response.status }
+                  : prevRun
+              )
+            );
+          }
+        } catch (error) {
+          console.error(`Error updating run ${run.id}:`, error);
         }
-      }, 5000);
-    };
+      })
+    );
+  };
 
-    monitoringRuns.forEach(monitoring => {
-      const currentStatus = monitoringResults[monitoring.id]?.status;
-      if (currentStatus === 'pending' || currentStatus === 'running') {
-        startPolling(monitoring.id);
-      }
+  const getStatusChipProps = (status) => {
+    switch (status) {
+      case 'completed':
+        return { label: 'Completed', color: 'primary' };
+      case 'running':
+        return { label: 'Running', color: 'secondary' };
+      case 'failed':
+        return { label: 'Failed', color: 'error' };
+      default:
+        return { label: 'Pending', color: 'default' };
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
     });
-
-    return () => {
-      Object.values(intervals).forEach(interval => clearInterval(interval));
-    };
-  }, [monitoringRuns, monitoringResults]);
-
-  const handleMapClick = (htmlContent) => {
-    setSelectedMap(htmlContent);
-    setMapDialogOpen(true);
   };
 
-  const handleCloseMap = () => {
-    setMapDialogOpen(false);
-    setSelectedMap(null);
+  const handleViewResults = (run) => {
+    setSelectedResults({
+      ...run,
+      ...runStatus[run.id]
+    });
+    setResultsDialogOpen(true);
   };
 
-  if (loading) {
-    return <LinearProgress />;
-  }
-
-  const getParameterName = (param) => {
-    switch(param) {
-      case 'C': return 'CHLA';
-      case 'T': return 'TURBIDITY';
-      case 'D': return 'DO';
-      default: return param;
-    }
+  const handleCloseResults = () => {
+    setResultsDialogOpen(false);
+    setSelectedResults(null);
   };
 
-  const getSatelliteName = (sat) => {
-    switch(sat) {
-      case 'L': return 'Landsat';
-      case 'S': return 'Sentinel';
-      default: return sat;
-    }
-  };
+  if (loading) return <LinearProgress />;
 
   return (
     <div className={classes.root}>
-      <Typography variant="h5" gutterBottom className={classes.monitoringTitle}>
-        Monitoring Runs
+      <Typography variant="h5" className={classes.title}>
+        ML Analysis Runs
       </Typography>
 
-      {monitoringRuns.map(monitoring => {
-        const results = monitoringResults[monitoring.id];
-        return (
-          <div key={monitoring.id} className={classes.monitoring}>
-            <Typography variant="h6" gutterBottom className={classes.monitoringTitle}>
-              Monitoring Run #{monitoring.id}
-            </Typography>
-
-            {results && (
-              <Typography 
-                variant="subtitle1" 
-                className={`${classes.status} ${
-                  results.status === 'pending' ? classes.statusPending : 
-                  results.status === 'completed' ? classes.statusCompleted : 
-                  classes.statusFailed
-                }`}
-              >
-                Status: {results.status.charAt(0).toUpperCase() + results.status.slice(1)}
-              </Typography>
-            )}
-
-            <Typography variant="body1" className={classes.monitoringInfo}>
-              Parameter: {getParameterName(monitoring.parameter)}
-              <br />
-              Satellite: {getSatelliteName(monitoring.satellite)}
-              <br />
-              Date Range: {new Date(monitoring.start_date).toLocaleDateString()} - {new Date(monitoring.end_date).toLocaleDateString()}
-              <br />
-              Location: {monitoring.latitude}°N, {monitoring.longitude}°E
-            </Typography>
-
-            {results && results.status === 'completed' && (
-              <Grid container spacing={2}>
-                {results.map_html && (
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      className={classes.downloadButton}
-                      onClick={() => handleMapClick(results.map_html)}
-                      startIcon={<MapIcon />}
-                    >
-                      View Interactive Map
-                    </Button>
-                  </Grid>
-                )}
-
-                {results.map_download && (
-                  <Grid item xs={12} sm={6}>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      className={classes.downloadButton}
-                      href={results.map_download}
-                      download
-                      startIcon={<GetAppIcon />}
-                    >
-                      Download Map Image
-                    </Button>
-                  </Grid>
-                )}
+      {mlRuns.length === 0 ? (
+        <Typography>No ML analysis runs found.</Typography>
+      ) : (
+        mlRuns.map(run => (
+          <Card key={run.id} className={classes.card}>
+            <CardContent>
+              <Chip
+                {...getStatusChipProps(runStatus[run.id]?.status || run.status)}
+                className={classes.statusChip}
+              />
+              
+              <Grid container spacing={2} className={classes.infoGrid}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="h6">
+                    Analysis #{run.id}
+                  </Typography>
+                  <Chip 
+                    label={run.model === 'W' ? 'Air2water' : 'Air2stream'}
+                    className={classes.modelTypeChip}
+                    size="small"
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2">
+                    Started: {formatDate(run.start_time)}
+                  </Typography>
+                  {run.end_time && (
+                    <Typography variant="body2">
+                      Completed: {formatDate(run.end_time)}
+                    </Typography>
+                  )}
+                </Grid>
               </Grid>
-            )}
 
-            {results && results.status === 'pending' && (
-              <LinearProgress />
-            )}
+              {runStatus[run.id]?.status === 'running' && (
+                <div className={classes.progressContainer}>
+                  <LinearProgress />
+                  <Typography variant="body2" align="center">
+                    Analysis in progress...
+                  </Typography>
+                </div>
+              )}
 
-            {results && results.status === 'failed' && results.error_message && (
-              <Typography color="error">
-                Error: {results.error_message}
-              </Typography>
-            )}
-          </div>
-        );
-      })}
+              {run.status === 'failed' && (
+                <Typography className={classes.error}>
+                  <ErrorIcon /> Error: {run.error_message}
+                </Typography>
+              )}
+            </CardContent>
 
-      {monitoringRuns.length === 0 && (
-        <Typography variant="body1" className={classes.monitoringInfo}>
-          No monitoring runs found.
-        </Typography>
+            <CardActions>
+              {runStatus[run.id]?.status === 'completed' && (
+                <>
+                  <Button
+                    startIcon={<AssessmentIcon />}
+                    onClick={() => handleViewResults(run)}
+                    color="primary"
+                  >
+                    View Results
+                  </Button>
+                  {runStatus[run.id]?.downloadLinks?.resultsZip && (
+                    <Button
+                      startIcon={<GetAppIcon />}
+                      href={runStatus[run.id].downloadLinks.resultsZip}
+                      color="secondary"
+                    >
+                      Download simulation results zip file
+                    </Button>
+                  )}
+                  {runStatus[run.id]?.downloadLinks?.resultsYaml && (
+                    <Button
+                      startIcon={<GetAppIcon />}
+                      href={runStatus[run.id].downloadLinks.resultsYaml}
+                      color="secondary"
+                    >
+                      Download algorithm performance results
+                    </Button>
+                  )}
+                </>
+              )}
+            </CardActions>
+          </Card>
+        ))
       )}
 
-      {/* Map Dialog */}
+      {/* Results Dialog */}
       <Dialog
-        open={mapDialogOpen}
-        onClose={handleCloseMap}
-        maxWidth="lg"
+        open={resultsDialogOpen}
+        onClose={handleCloseResults}
+        maxWidth="md"
         fullWidth
-        className={classes.mapDialog}
       >
-        <DialogTitle disableTypography className={classes.dialogTitle}>
-          <Typography variant="h6">Interactive Map</Typography>
-          <IconButton className={classes.closeButton} onClick={handleCloseMap}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <div className={classes.mapContainer}>
-            {selectedMap && (
-              <iframe
-                srcDoc={selectedMap}
-                title="Interactive Map"
-                sandbox="allow-same-origin allow-scripts"
-              />
-            )}
-          </div>
-        </DialogContent>
+        {selectedResults && selectedResults.results && (
+          <>
+            <DialogTitle>
+              <div className={classes.dialogTitle}>
+                <Typography variant="h6">
+                  Analysis Results #{selectedResults.id}
+                </Typography>
+                <IconButton onClick={handleCloseResults}>
+                  <CloseIcon />
+                </IconButton>
+              </div>
+            </DialogTitle>
+            <DialogContent>
+              <Paper elevation={0}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Best Model Performance
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body1" className={classes.metric}>
+                        Model: {selectedResults.results.best_model?.name}
+                      </Typography>
+                      <Typography variant="body1" className={classes.metric}>
+                        Type: {selectedResults.results.best_model?.type}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body1" className={classes.metric}>
+                        Validation R²: {selectedResults.results.best_model?.validation_r2.toFixed(4)}
+                      </Typography>
+                      <Typography variant="body1" className={classes.metric}>
+                        Training R² (mean): {selectedResults.results.best_model?.training_r2_mean.toFixed(4)}
+                      </Typography>
+                      <Typography variant="body1" className={classes.metric}>
+                        Training R² (std): {selectedResults.results.best_model?.training_r2_std.toFixed(4)}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                  
+                  <Typography variant="body1" className={classes.metric}>
+                    Total Execution Time: {selectedResults.results.total_time.toFixed(2)} seconds
+                  </Typography>
+                </CardContent>
+              </Paper>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseResults} color="primary">
+                Close
+              </Button>
+            </DialogActions>
+          </>
+        )}
       </Dialog>
     </div>
   );
-}
+};
+
+export default EventList;

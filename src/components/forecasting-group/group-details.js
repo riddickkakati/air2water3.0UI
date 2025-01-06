@@ -53,24 +53,29 @@ function GroupDetails() {
         }
         setGroup(data);
     }, [data, authData]);
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleString();
+      };
     
-        const joinHere = () => {
-            joinGroup({user: authData.user.id, group: group.id}).then(
-                res => { 
-                    console.log(res);
-                    refetch();  // Refetch group data after joining
-                }
-            );
-        };
+    const joinHere = () => {
+        joinGroup({user: authData.user.id, group: group.id}).then(
+            res => { 
+                console.log(res);
+                refetch();  // Refetch group data after joining
+            }
+        );
+    };
     
-        const leaveHere = () => {
-            leaveGroup({user: authData.user.id, group: group.id}).then(
-                res => { 
-                    console.log(res);
-                    refetch();  // Refetch group data after leaving
-                }
-            );
-        };
+    const leaveHere = () => {
+        leaveGroup({user: authData.user.id, group: group.id}).then(
+            res => { 
+                console.log(res);
+                refetch();  // Refetch group data after leaving
+            }
+        );
+    };
 
     const addEvent = () => {
         history.push('/forecasting/event-form', {group})
@@ -90,7 +95,7 @@ function GroupDetails() {
                 <h2>
                     {group.forecasting_members &&
                         group.forecasting_members
-                        .find(member => member.admin)?.user.username || 'No Admin'} created this group on {group.time}
+                        .find(member => member.admin)?.user.username || 'No Admin'} created this group on {formatDate(group.time)}
                     </h2>
 
                 <Link to={'/forecasting/group-form'}>Create Group</Link>
@@ -115,7 +120,7 @@ function GroupDetails() {
 
                     return <div key={member.id} className={classes.memberContainer}>
                         <User user={member.user}/>
-                        <p>{member.time}</p>
+                        <p>{formatDate(member.time)}</p>
                     </div>
                 })}
                 

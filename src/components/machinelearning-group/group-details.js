@@ -53,24 +53,29 @@ function GroupDetails3() {
         }
         setGroup(data);
     }, [data, authData]);
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleString();
+      };
     
-        const joinHere = () => {
-            joinGroup3({user: authData.user.id, group: group.id}).then(
-                res => { 
-                    console.log(res);
-                    refetch();  // Refetch group data after joining
-                }
-            );
-        };
-    
-        const leaveHere = () => {
-            leaveGroup3({user: authData.user.id, group: group.id}).then(
-                res => { 
-                    console.log(res);
-                    refetch();  // Refetch group data after leaving
-                }
-            );
-        };
+    const joinHere = () => {
+        joinGroup3({user: authData.user.id, group: group.id}).then(
+            res => { 
+                console.log(res);
+                refetch();  // Refetch group data after joining
+            }
+        );
+    };
+
+    const leaveHere = () => {
+        leaveGroup3({user: authData.user.id, group: group.id}).then(
+            res => { 
+                console.log(res);
+                refetch();  // Refetch group data after leaving
+            }
+        );
+    };
 
     const addEvent = () => {
         history.push('/machinelearning/event-form', {group})
@@ -90,7 +95,7 @@ function GroupDetails3() {
                 <h2>
                     {group.machine_learning_members &&
                         group.machine_learning_members
-                        .find(member => member.admin)?.user.username || 'No Admin'} created this group on {group.time}
+                        .find(member => member.admin)?.user.username || 'No Admin'} created this group on {formatDate(group.time)}
                     </h2>
 
                 <Link to={'/machinelearning/group-form'}>Create Group</Link>
@@ -115,7 +120,7 @@ function GroupDetails3() {
 
                     return <div key={member.id} className={classes.memberContainer}>
                         <User user={member.user}/>
-                        <p>{member.time}</p>
+                        <p>{formatDate(member.time)}</p>
                     </div>
                 })}
                 

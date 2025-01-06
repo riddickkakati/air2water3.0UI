@@ -10,11 +10,12 @@ import {
   FormControlLabel,
   FormControl,
   FormLabel,
+  Checkbox,
   makeStyles,
   Grid
 } from '@material-ui/core';
 import { useAuth } from '../../hooks/useAuth';
-import { useFetchGroup2 } from '../../hooks/fetch-group';
+import { useFetchGroup3 } from '../../hooks/fetch-group';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -41,10 +42,6 @@ const useStyles = makeStyles((theme) => ({
     display: 'block',
     marginBottom: theme.spacing(1),
     color: theme.palette.text.secondary
-  },
-  selectedFile: {
-    marginTop: theme.spacing(1),
-    color: theme.palette.text.secondary
   }
 }));
 
@@ -55,30 +52,33 @@ const EventForm = () => {
   const history = useHistory();
   
   const group = location.state?.group;
-  const [groupData, loading, error] = useFetchGroup2(group?.id);
+  const [groupData, loading, error] = useFetchGroup3(group?.id);
   const [isInGroup, setIsInGroup] = useState(false);
-  const [serviceKeyFile, setServiceKeyFile] = useState(null);
   
   const [formData, setFormData] = useState({
-    start_date: '',
-    end_date: '',
-    latitude: '10.683',
-    longitude: '45.667',
-    satellite: 'L',
-    parameter: 'C',
-    cloud_cover: 7,
-    service_account: 'your-service-account@project.iam.gserviceaccount.com'
+    model: 'W', // Air2water is default
+    interpolate: true,
+    n_data_interpolate: 7,
+    validation_required: 'F',
+    percent: 10,
+    email_send: false,
+    email_list: ''
+  });
+
+  const [files, setFiles] = useState({
+    timeseries_file: null,
+    validation_file: null
   });
 
   useEffect(() => {
     if (!group) {
-      history.push('/monitoring');
+      history.push('/machinelearning');
     }
   }, [group, history]);
 
   useEffect(() => {
     if (groupData && authData?.user) {
-      const memberStatus = groupData.monitoring_members?.find(
+      const memberStatus = groupData.machine_learning_members?.find(
         member => member.user.id === authData.user.id
       );
       setIsInGroup(!!memberStatus);
@@ -88,7 +88,6 @@ const EventForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Create form data for multipart/form-data submission
       const submitFormData = new FormData();
       
       // Add all form fields
@@ -96,222 +95,225 @@ const EventForm = () => {
         submitFormData.append(key, formData[key]);
       });
       
-      // Add the group ID
-      submitFormData.append('group', group.id);
-      
-      // Add the service key file if selected
-      if (serviceKeyFile) {
-        submitFormData.append('service_key_file', serviceKeyFile);
+      // Add files
+      if (files.timeseries_file) {
+        submitFormData.append('timeseries_file', files.timeseries_file);
       }
+      if (files.validation_file) {
+        submitFormData.append('validation_file', files.validation_file);
+      }
+      
+      // Add group ID
+      submitFormData.append('group', group.id);
 
-      const response = await fetch('http://127.0.0.1:8000/monitoring/compute/', {
+      const response = await fetch('http://127.0.0.1:8000/machinelearning/ml_analysis/', {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`
-          // Don't set Content-Type - it will be set automatically for FormData
         },
         body: submitFormData
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create monitoring run');
+        throw new Error('Failed to create ML analysis');
       }
 
       const data = await response.json();
 
-      const runResponse = await fetch(`http://127.0.0.1:8000/monitoring/compute/${data.id}/run_monitoring/`, {
+      // Start the analysis
+      const runResponse = await fetch(`http://127.0.0.1:8000/machinelearning/ml_analysis/${data.id}/run_analysis/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${authData.token}`
+          'Authorization': `Token ${authData.token}`,
+          'Content-Type': 'application/json'
         }
       });
 
       if (!runResponse.ok) {
-        throw new Error('Failed to start monitoring run');
+        throw new Error('Failed to start ML analysis');
       }
 
-      history.push(`/monitoring/groups/${group.id}`);
+      history.push(`/machinelearning/groups/${group.id}`);
 
     } catch (error) {
-      console.error('Error in monitoring creation:', error);
+      console.error('Error in ML analysis creation:', error);
     }
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.name.endsWith('.json')) {
-        alert('Please upload a JSON file');
-        return;
-      }
-      setServiceKeyFile(file);
+    const { name, files } = e.target;
+    if (files[0]) {
+      setFiles(prev => ({
+        ...prev,
+        [name]: files[0]
+      }));
     }
   };
 
   if (!group) return <Typography>No group information provided</Typography>;
   if (loading) return <Typography>Loading...</Typography>;
   if (error) return <Typography>Error loading group: {error.message}</Typography>;
-  if (!isInGroup) return <Typography>You must be a member of this group to create an event</Typography>;
+  if (!isInGroup) return <Typography>You must be a member of this group to create an ML analysis</Typography>;
 
-  const isFormValid = formData.latitude && 
-                     formData.longitude && 
-                     formData.start_date && 
-                     formData.end_date && 
-                     formData.parameter && 
-                     formData.satellite &&
-                     serviceKeyFile;
+  const isFormValid = files.timeseries_file && 
+    (formData.validation_required === 'F' ? files.validation_file : true) &&
+    formData.percent >= 1 && formData.percent <= 50;
 
   return (
     <Paper className={classes.root}>
       <Typography variant="h5" className={classes.title}>
-        Create New Monitoring Run
+        Create new analysis
       </Typography>
 
       <form onSubmit={handleSubmit}>
         <Grid container spacing={3}>
-          {/* Parameter Selection */}
+          {/* Model Selection */}
           <Grid item xs={12} md={6}>
             <FormControl component="fieldset" className={classes.formControl}>
-              <FormLabel component="legend">Select Parameter</FormLabel>
+              <FormLabel component="legend">Select Model</FormLabel>
               <RadioGroup 
-                value={formData.parameter}
+                value={formData.model}
                 onChange={handleChange}
-                name="parameter"
+                name="model"
               >
-                <FormControlLabel value="C" control={<Radio />} label="CHLA" />
-                <FormControlLabel value="T" control={<Radio />} label="TURBIDITY" />
-                <FormControlLabel value="D" control={<Radio />} label="DO" />
+                <FormControlLabel value="W" control={<Radio />} label="Air2water" />
+                <FormControlLabel value="S" control={<Radio />} label="Air2stream" />
               </RadioGroup>
             </FormControl>
           </Grid>
 
-          {/* Satellite Selection */}
+          {/* Validation Type Selection */}
           <Grid item xs={12} md={6}>
             <FormControl component="fieldset" className={classes.formControl}>
-              <FormLabel component="legend">Select Satellite</FormLabel>
+              <FormLabel component="legend">Validation Method</FormLabel>
               <RadioGroup 
-                value={formData.satellite}
+                value={formData.validation_required}
                 onChange={handleChange}
-                name="satellite"
+                name="validation_required"
               >
-                <FormControlLabel value="L" control={<Radio />} label="Landsat" />
-                <FormControlLabel value="S" control={<Radio />} label="Sentinel" />
+                <FormControlLabel value="F" control={<Radio />} label="Use Validation File" />
+                <FormControlLabel value="R" control={<Radio />} label="Random Percentage" />
+                <FormControlLabel value="U" control={<Radio />} label="Uniform Percentage" />
+                <FormControlLabel value="N" control={<Radio />} label="Uniform Number" />
               </RadioGroup>
             </FormControl>
           </Grid>
 
-          {/* Location Fields */}
-          <Grid item xs={12} md={6}>
-            <TextField
-              label="Latitude"
-              type="number"
-              name="latitude"
-              value={formData.latitude}
-              onChange={handleChange}
-              fullWidth
-              required
-              className={classes.textField}
-              inputProps={{ step: "any" }}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              label="Longitude"
-              type="number"
-              name="longitude"
-              value={formData.longitude}
-              onChange={handleChange}
-              fullWidth
-              required
-              className={classes.textField}
-              inputProps={{ step: "any" }}
-            />
-          </Grid>
-
-          {/* Date Range Fields */}
-          <Grid item xs={12} md={6}>
-            <TextField
-              label="Start Date"
-              type="date"
-              name="start_date"
-              value={formData.start_date}
-              onChange={handleChange}
-              fullWidth
-              required
-              className={classes.textField}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <TextField
-              label="End Date"
-              type="date"
-              name="end_date"
-              value={formData.end_date}
-              onChange={handleChange}
-              fullWidth
-              required
-              className={classes.textField}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-
-          {/* Cloud Cover Setting */}
-          <Grid item xs={12}>
-            <TextField
-              label="Cloud Cover (%)"
-              type="number"
-              name="cloud_cover"
-              value={formData.cloud_cover}
-              onChange={handleChange}
-              fullWidth
-              className={classes.textField}
-              inputProps={{
-                min: 0,
-                max: 100
-              }}
-            />
-          </Grid>
-
-          {/* Service Account Settings */}
-          <Grid item xs={12}>
-            <TextField
-              label="Service Account Email"
-              name="service_account"
-              value={formData.service_account}
-              onChange={handleChange}
-              fullWidth
-              className={classes.textField}
-            />
-          </Grid>
-
-          {/* Service Key File Upload */}
+          {/* File Uploads */}
           <Grid item xs={12}>
             <Typography variant="body2" className={classes.fileLabel}>
-              Service Key File (JSON)
+              Timeseries File (Required)
             </Typography>
             <input
-              accept=".json"
               type="file"
+              name="timeseries_file"
               onChange={handleFileChange}
+              accept=".txt"
               className={classes.fileInput}
+              required
             />
-            {serviceKeyFile && (
-              <Typography variant="body2" className={classes.selectedFile}>
-                Selected file: {serviceKeyFile.name}
-              </Typography>
-            )}
           </Grid>
+
+          {formData.validation_required === 'F' && (
+            <Grid item xs={12}>
+              <Typography variant="body2" className={classes.fileLabel}>
+                Validation File (Required for external validation)
+              </Typography>
+              <input
+                type="file"
+                name="validation_file"
+                onChange={handleFileChange}
+                accept=".txt"
+                className={classes.fileInput}
+                required
+              />
+            </Grid>
+          )}
+
+          {/* Interpolation Settings */}
+          <Grid item xs={12} md={6}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.interpolate}
+                  onChange={handleChange}
+                  name="interpolate"
+                />
+              }
+              label="Enable Interpolation"
+            />
+          </Grid>
+
+          {formData.interpolate && (
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Interpolation Data Points"
+                type="number"
+                name="n_data_interpolate"
+                value={formData.n_data_interpolate}
+                onChange={handleChange}
+                fullWidth
+                className={classes.textField}
+                inputProps={{
+                  min: 1
+                }}
+              />
+            </Grid>
+          )}
+
+          {/* Validation Percentage */}
+          {formData.validation_required !== 'F' && (
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Validation Percentage"
+                type="number"
+                name="percent"
+                value={formData.percent}
+                onChange={handleChange}
+                fullWidth
+                className={classes.textField}
+                inputProps={{
+                  min: 1,
+                  max: 50
+                }}
+              />
+            </Grid>
+          )}
+
+          {/* Email Settings */}
+          <Grid item xs={12} md={6}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={formData.email_send}
+                  onChange={handleChange}
+                  name="email_send"
+                />
+              }
+              label="Send Email Notifications"
+            />
+          </Grid>
+
+          {formData.email_send && (
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Email List (comma-separated)"
+                name="email_list"
+                value={formData.email_list}
+                onChange={handleChange}
+                fullWidth
+                className={classes.textField}
+              />
+            </Grid>
+          )}
         </Grid>
 
         <Button
@@ -322,7 +324,7 @@ const EventForm = () => {
           disabled={!isFormValid}
           className={classes.submitButton}
         >
-          Start Monitoring Run
+          Start ML Analysis
         </Button>
       </form>
     </Paper>
