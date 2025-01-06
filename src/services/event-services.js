@@ -25,6 +25,18 @@ export function getEvent2(token, id) {
   .catch(e => {console.log(e)});
 }
 
+export function getEvent3(token, id) {
+  return fetch(`http://127.0.0.1:8000/machinelearning/ml_analysis/${id}/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`
+    },
+  })
+  .then(status)
+  .catch(e => {console.log(e)});
+}
+
 // File upload functions
 export function uploadTimeseriesFile(token, fileData) {
   return fetch('http://127.0.0.1:8000/forecasting/timeseries/', {
@@ -105,6 +117,19 @@ export function createSimulation2(token, simulationData) {
   .catch(e => {console.log(e)});
 }
 
+export function createSimulation3(token, simulationData) {
+  return fetch('http://127.0.0.1:8000/machinelearning/ml_analysis/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`
+    },
+    body: JSON.stringify(simulationData)
+  })
+  .then(status)
+  .catch(e => {console.log(e)});
+}
+
 export function runSimulation(token, simulationId) {
   return fetch(`http://127.0.0.1:8000/forecasting/simulations/${simulationId}/run_simulation/`, {
     method: 'POST',
@@ -129,6 +154,18 @@ export function runSimulation2(token, simulationId) {
   .catch(e => {console.log(e)});
 }
 
+export function runSimulation3(token, simulationId) {
+  return fetch(`http://127.0.0.1:8000/machinelearning/ml_analysis/${simulationId}/run_analysis/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`
+    }
+  })
+  .then(status)
+  .catch(e => {console.log(e)});
+}
+
 export function checkSimulationStatus(token, simulationId) {
   return fetch(`http://127.0.0.1:8000/forecasting/simulations/${simulationId}/check_status/`, {
     method: 'GET',
@@ -143,6 +180,18 @@ export function checkSimulationStatus(token, simulationId) {
 
 export function checkSimulationStatus2(token, simulationId) {
   return fetch(`http://127.0.0.1:8000/monitoring/compute/${simulationId}/check_status/`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`
+    }
+  })
+  .then(status)
+  .catch(e => {console.log(e)});
+}
+
+export function checkSimulationStatus3(token, simulationId) {
+  return fetch(`http://127.0.0.1:8000/machinelearning/ml_analysis/${simulationId}/check_status/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

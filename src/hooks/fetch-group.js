@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getGroup, getGroup2 } from '../services/group-services';
+import { getGroup, getGroup2, getGroup3 } from '../services/group-services';
 
 export function useFetchGroup(groupId) {
     const [group, setGroup] = useState(null);
@@ -38,6 +38,33 @@ export function useFetchGroup2(groupId) {
         try {
             setLoading(true);
             const data = await getGroup2(groupId);
+            console.log('Group data received:', data);  // Add this
+            setGroup(data);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching group:', err);  // Add this
+            setError(err);
+        } finally {
+            setLoading(false);
+        }
+    }, [groupId]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    return [group, loading, error, fetchData];
+}
+
+export function useFetchGroup3(groupId) {
+    const [group, setGroup] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
+
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const data = await getGroup3(groupId);
             console.log('Group data received:', data);  // Add this
             setGroup(data);
             setError(null);
