@@ -46,23 +46,6 @@ function GroupDetails2() {
     
     useEffect(()=>{
         if(data?.monitoring_members){
-            data.monitoring_members.sort((a,b) => b.points - a.points);
-
-            const availableTrophies = ['gold', 'silver', 'bronze'];
-            let currentTrophy = 0;
-            data.monitoring_members.map( (m, indx) => {
-                if(indx === 0){
-                    m.trophy = availableTrophies[currentTrophy];
-                } else {
-                    if(m.points !== data.monitoring_members[indx -1].points){
-                        currentTrophy++;
-                    }
-                    if(currentTrophy < availableTrophies.length){
-                        m.trophy = availableTrophies[currentTrophy];
-                    }
-                }
-            });
-
             if(authData?.user) {
                 setInGroup(!!data.monitoring_members.find( member => member.user.id === authData.user.id));
                 setIsAdmin(data.monitoring_members.find( member => member.user.id === authData.user.id)?.admin);
@@ -101,7 +84,8 @@ function GroupDetails2() {
         <div>
             { group &&
             <React.Fragment>
-                <h1>{group.name} {group.location}</h1>
+                <h1>{group.name}</h1>
+                <h1>{group.location}</h1>
                 <h2>{group.description}</h2>
                 <h2>
                     {group.monitoring_members &&
