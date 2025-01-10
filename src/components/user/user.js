@@ -2,6 +2,7 @@ import React from 'react';
 import { Avatar } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import PropTypes from 'prop-types';
+import config from '../../utils/config';
 
 const useStyles = makeStyles({
   container: {
@@ -23,7 +24,7 @@ export default function User({user}) {
 
   return (
     <div className={classes.container}>
-        <Avatar alt="user avatar" src={"http://127.0.0.1:8000"+user.profile.image} />
+        <Avatar alt="user avatar" src={`${config.API_URL}`+user.profile.image} />
         <h4 className={classes.username}>{user.username}</h4>
     </div>
   );

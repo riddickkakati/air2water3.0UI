@@ -1,8 +1,9 @@
 import { status } from '../utils';
+import config from '../utils/config';
 
 // Existing functions
 export function getEvent(token, id) {
-  return fetch(`http://127.0.0.1:8000/forecasting/simulations/${id}/`, {
+  return fetch(`${config.API_URL}/forecasting/simulations/${id}/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -14,7 +15,7 @@ export function getEvent(token, id) {
 }
 
 export function getEvent2(token, id) {
-  return fetch(`http://127.0.0.1:8000/monitoring/compute/${id}/`, {
+  return fetch(`${config.API_URL}/monitoring/compute/${id}/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -26,7 +27,7 @@ export function getEvent2(token, id) {
 }
 
 export function getEvent3(token, id) {
-  return fetch(`http://127.0.0.1:8000/machinelearning/ml_analysis/${id}/`, {
+  return fetch(`${config.API_URL}/machinelearning/ml_analysis/${id}/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -39,7 +40,7 @@ export function getEvent3(token, id) {
 
 // File upload functions
 export function uploadTimeseriesFile(token, fileData) {
-  return fetch('http://127.0.0.1:8000/forecasting/timeseries/', {
+  return fetch(`${config.API_URL}/forecasting/timeseries/`, {
     method: 'POST',
     headers: {
       'Authorization': `Token ${token}`,
@@ -55,7 +56,7 @@ export function uploadTimeseriesFile(token, fileData) {
 }
 
 export function uploadParameterFile(token, fileData) {
-  return fetch('http://127.0.0.1:8000/forecasting/parameters/', {
+  return fetch(`${config.API_URL}/forecasting/parameters/`, {
     method: 'POST',
     headers: {
       'Authorization': `Token ${token}`
@@ -67,7 +68,7 @@ export function uploadParameterFile(token, fileData) {
 }
 
 export function uploadParameterRangesFile(token, fileData) {
-  return fetch('http://127.0.0.1:8000/forecasting/parameterranges/', {
+  return fetch(`${config.API_URL}/forecasting/parameterranges/`, {
     method: 'POST',
     headers: {
       'Authorization': `Token ${token}`
@@ -79,7 +80,7 @@ export function uploadParameterRangesFile(token, fileData) {
 }
 
 export function uploadValidationFile(token, fileData) {
-  return fetch('http://127.0.0.1:8000/forecasting/uservalidation/', {
+  return fetch(`${config.API_URL}/forecasting/uservalidation/`, {
     method: 'POST',
     headers: {
       'Authorization': `Token ${token}`
@@ -92,7 +93,7 @@ export function uploadValidationFile(token, fileData) {
 
 // Simulation creation and management
 export function createSimulation(token, simulationData) {
-  return fetch('http://127.0.0.1:8000/forecasting/simulations/', {
+  return fetch(`${config.API_URL}/forecasting/simulations/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -105,7 +106,7 @@ export function createSimulation(token, simulationData) {
 }
 
 export function createSimulation2(token, simulationData) {
-  return fetch('http://127.0.0.1:8000/monitoring/compute/', {
+  return fetch(`${config.API_URL}/monitoring/compute/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -118,7 +119,7 @@ export function createSimulation2(token, simulationData) {
 }
 
 export function createSimulation3(token, simulationData) {
-  return fetch('http://127.0.0.1:8000/machinelearning/ml_analysis/', {
+  return fetch(`${config.API_URL}/machinelearning/ml_analysis/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -131,7 +132,7 @@ export function createSimulation3(token, simulationData) {
 }
 
 export function runSimulation(token, simulationId) {
-  return fetch(`http://127.0.0.1:8000/forecasting/simulations/${simulationId}/run_simulation/`, {
+  return fetch(`${config.API_URL}/forecasting/simulations/${simulationId}/run_simulation/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -143,7 +144,7 @@ export function runSimulation(token, simulationId) {
 }
 
 export function runSimulation2(token, simulationId) {
-  return fetch(`http://127.0.0.1:8000/monitoring/compute/${simulationId}/run_monitoring/`, {
+  return fetch(`${config.API_URL}/monitoring/compute/${simulationId}/run_monitoring/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -155,7 +156,7 @@ export function runSimulation2(token, simulationId) {
 }
 
 export function runSimulation3(token, simulationId) {
-  return fetch(`http://127.0.0.1:8000/machinelearning/ml_analysis/${simulationId}/run_analysis/`, {
+  return fetch(`${config.API_URL}/machinelearning/ml_analysis/${simulationId}/run_analysis/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -167,7 +168,7 @@ export function runSimulation3(token, simulationId) {
 }
 
 export function checkSimulationStatus(token, simulationId) {
-  return fetch(`http://127.0.0.1:8000/forecasting/simulations/${simulationId}/check_status/`, {
+  return fetch(`${config.API_URL}/forecasting/simulations/${simulationId}/check_status/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -179,7 +180,7 @@ export function checkSimulationStatus(token, simulationId) {
 }
 
 export function checkSimulationStatus2(token, simulationId) {
-  return fetch(`http://127.0.0.1:8000/monitoring/compute/${simulationId}/check_status/`, {
+  return fetch(`${config.API_URL}/monitoring/compute/${simulationId}/check_status/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -191,7 +192,7 @@ export function checkSimulationStatus2(token, simulationId) {
 }
 
 export function checkSimulationStatus3(token, simulationId) {
-  return fetch(`http://127.0.0.1:8000/machinelearning/ml_analysis/${simulationId}/check_status/`, {
+  return fetch(`${config.API_URL}/machinelearning/ml_analysis/${simulationId}/check_status/`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -204,7 +205,7 @@ export function checkSimulationStatus3(token, simulationId) {
 
 // Additional simulation parameter functions
 export function savePSOParameters(token, simulationId, psoData) {
-  return fetch(`http://127.0.0.1:8000/forecasting/psoparameter/`, {
+  return fetch(`${config.API_URL}/forecasting/psoparameter/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -220,7 +221,7 @@ export function savePSOParameters(token, simulationId, psoData) {
 }
 
 export function saveLatinParameters(token, simulationId, latinData) {
-  return fetch(`http://127.0.0.1:8000/forecasting/latinparameter/`, {
+  return fetch(`${config.API_URL}/forecasting/latinparameter/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -236,7 +237,7 @@ export function saveLatinParameters(token, simulationId, latinData) {
 }
 
 export function saveMonteCarloParameters(token, simulationId, monteCarloData) {
-  return fetch(`http://127.0.0.1:8000/forecasting/montecarloparameter/`, {
+  return fetch(`${config.API_URL}/forecasting/montecarloparameter/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -252,7 +253,7 @@ export function saveMonteCarloParameters(token, simulationId, monteCarloData) {
 }
 
 export function saveForwardParameters(token, simulationId, forwardData) {
-  return fetch(`http://127.0.0.1:8000/forecasting/parameterforward/`, {
+  return fetch(`${config.API_URL}/forecasting/parameterforward/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

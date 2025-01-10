@@ -11,6 +11,7 @@ import TimelineIcon from '@material-ui/icons/Timeline';
 import ScatterPlotIcon from '@material-ui/icons/ScatterPlot';
 import BarChartIcon from '@material-ui/icons/BarChart';
 import GetAppIcon from '@material-ui/icons/GetApp';
+import config from '../../utils/config';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -67,7 +68,7 @@ export default function EventList() {
   useEffect(() => {
     const fetchSimulations = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/forecasting/simulations/', {
+        const response = await fetch(`${config.API_URL}/forecasting/simulations/`, {
           headers: {
             'Authorization': `Token ${authData.token}`
           }
@@ -98,7 +99,7 @@ export default function EventList() {
   const fetchSimulationStatus = async (simulationId) => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/forecasting/simulations/${simulationId}/check_status/`,
+        `${config.API_URL}/forecasting/simulations/${simulationId}/check_status/`,
         {
           headers: {
             'Authorization': `Token ${authData.token}`

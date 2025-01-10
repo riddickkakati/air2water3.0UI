@@ -1,7 +1,8 @@
 import { status } from '../utils';
+import config from '../utils/config';
 
 export function auth(credentials){
-  return fetch('http://127.0.0.1:8000/forecasting/authenticate/', {
+  return fetch(`${config.API_URL}/forecasting/authenticate/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -11,7 +12,7 @@ export function auth(credentials){
 }
 
 export function register(userData){
-  return fetch('http://127.0.0.1:8000/forecasting/users/', {
+  return fetch(`${config.API_URL}/forecasting/users/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -21,7 +22,7 @@ export function register(userData){
 }
 
 export function changePass(userData, userId, token){
-  return fetch(`http://127.0.0.1:8000/forecasting/users/${userId}/change_pass/`, {
+  return fetch(`${config.API_URL}/forecasting/users/${userId}/change_pass/`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -32,7 +33,7 @@ export function changePass(userData, userId, token){
 }
 
 export function uploadAvatar(profileId, data){
-  return fetch(`http://127.0.0.1:8000/forecasting/profile/${profileId}/`, {
+  return fetch(`${config.API_URL}/forecasting/profile/${profileId}/`, {
     method: 'PUT',
     body: data
   }).then(status).catch( e => {console.log(e)})

@@ -1,37 +1,38 @@
 import { status } from '../utils';
+import config from '../utils/config';
 
 export function getGroups(){
-  return fetch(`http://127.0.0.1:8000/forecasting/groups/`)
+  return fetch(`${config.API_URL}/forecasting/groups/`)
   .then(status).catch( e => {console.log(e)})
 }
 
 export function getGroups2(){
-  return fetch(`http://127.0.0.1:8000/monitoring/groups/`)
+  return fetch(`${config.API_URL}/monitoring/groups/`)
   .then(status).catch( e => {console.log(e)})
 }
 
 export function getGroups3(){
-  return fetch(`http://127.0.0.1:8000/machinelearning/groups/`)
+  return fetch(`${config.API_URL}/machinelearning/groups/`)
   .then(status).catch( e => {console.log(e)})
 }
 
 export function getGroup(id){
-  return fetch(`http://127.0.0.1:8000/forecasting/groups/${id}/`)
+  return fetch(`${config.API_URL}/forecasting/groups/${id}/`)
   .then(status).catch( e => {console.log(e)})
 }
 
 export function getGroup2(id){
-  return fetch(`http://127.0.0.1:8000/monitoring/groups/${id}/`)
+  return fetch(`${config.API_URL}/monitoring/groups/${id}/`)
   .then(status).catch( e => {console.log(e)})
 }
 
 export function getGroup3(id){
-  return fetch(`http://127.0.0.1:8000/machinelearning/groups/${id}/`)
+  return fetch(`${config.API_URL}/machinelearning/groups/${id}/`)
   .then(status).catch( e => {console.log(e)})
 }
 
 export function createGroup(token, userData){
-  return fetch(`http://127.0.0.1:8000/forecasting/groups/`, {
+  return fetch(`${config.API_URL}/forecasting/groups/`, {
       method: 'POST',
       headers: {
           'Content-Type': 'application/json',
@@ -45,7 +46,7 @@ export function createGroup(token, userData){
 
 export function createGroup2(token, userData){
   console.log('Making request with token:', token);
-  return fetch(`http://127.0.0.1:8000/monitoring/groups/`, {
+  return fetch(`${config.API_URL}/monitoring/groups/`, {
       method: 'POST',
       headers: {
           'Content-Type': 'application/json',
@@ -70,7 +71,7 @@ export function createGroup2(token, userData){
 
 export function createGroup3(token, userData){
   console.log('Making request with token:', token);
-  return fetch(`http://127.0.0.1:8000/machinelearning/groups/`, {
+  return fetch(`${config.API_URL}/machinelearning/groups/`, {
       method: 'POST',
       headers: {
           'Content-Type': 'application/json',
@@ -94,7 +95,7 @@ export function createGroup3(token, userData){
 }
 
 export function joinGroup(data){
-  return fetch(`http://127.0.0.1:8000/forecasting/members/join/`, {
+  return fetch(`${config.API_URL}/forecasting/members/join/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -105,7 +106,7 @@ export function joinGroup(data){
 }
 
 export function joinGroup2(data){
-  return fetch(`http://127.0.0.1:8000/monitoring/members/join/`, {
+  return fetch(`${config.API_URL}/monitoring/members/join/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -116,7 +117,7 @@ export function joinGroup2(data){
 }
 
 export function joinGroup3(data){
-  return fetch(`http://127.0.0.1:8000/machinelearning/members/join/`, {
+  return fetch(`${config.API_URL}/machinelearning/members/join/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -127,7 +128,7 @@ export function joinGroup3(data){
 }
 
 export function leaveGroup(data){
-  return fetch(`http://127.0.0.1:8000/forecasting/members/leave/`, {
+  return fetch(`${config.API_URL}/forecasting/members/leave/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -138,7 +139,7 @@ export function leaveGroup(data){
 }
 
 export function leaveGroup2(data){
-  return fetch(`http://127.0.0.1:8000/monitoring/members/leave/`, {
+  return fetch(`${config.API_URL}/monitoring/members/leave/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -149,7 +150,7 @@ export function leaveGroup2(data){
 }
 
 export function leaveGroup3(data){
-  return fetch(`http://127.0.0.1:8000/machinelearning/members/leave/`, {
+  return fetch(`${config.API_URL}/machinelearning/members/leave/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -161,7 +162,7 @@ export function leaveGroup3(data){
 
 
 export function postComment(token, description, group, user){
-  return fetch(`http://127.0.0.1:8000/forecasting/comments/`, {
+  return fetch(`${config.API_URL}/forecasting/comments/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -173,7 +174,7 @@ export function postComment(token, description, group, user){
 }
 
 export function postComment2(token, description, group, user){
-  return fetch(`http://127.0.0.1:8000/monitoring/comments/`, {
+  return fetch(`${config.API_URL}/monitoring/comments/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -185,7 +186,7 @@ export function postComment2(token, description, group, user){
 }
 
 export function postComment3(token, description, group, user){
-  return fetch(`http://127.0.0.1:8000/machinelearning/comments/`, {
+  return fetch(`${config.API_URL}/machinelearning/comments/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

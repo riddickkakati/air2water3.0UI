@@ -15,6 +15,7 @@ import {
 } from '@material-ui/core';
 import { useAuth } from '../../hooks/useAuth';
 import { useFetchGroup } from '../../hooks/fetch-group';
+import config from '../../utils/config';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -170,7 +171,7 @@ const EventForm = () => {
         console.log(pair[0] + ': ' + pair[1]);
       }
   
-      const response = await fetch('http://127.0.0.1:8000/forecasting/timeseries/', {
+      const response = await fetch(`${config.API_URL}/forecasting/timeseries/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`
@@ -223,7 +224,7 @@ const EventForm = () => {
         user: authData.user.id
       });
 
-      const response = await fetch('http://127.0.0.1:8000/forecasting/parameters/', {
+      const response = await fetch(`${config.API_URL}/forecasting/parameters/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`
@@ -261,7 +262,7 @@ const EventForm = () => {
     console.log('Starting parameter ranges upload...');
   
     try {
-      const response = await fetch('http://127.0.0.1:8000/forecasting/parameterranges/', {
+      const response = await fetch(`${config.API_URL}/forecasting/parameterranges/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`
@@ -309,7 +310,7 @@ const EventForm = () => {
         user: authData.user.id
       });
   
-      const response = await fetch('http://127.0.0.1:8000/forecasting/uservalidation/', {
+      const response = await fetch(`${config.API_URL}/forecasting/uservalidation/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`
@@ -362,7 +363,7 @@ const EventForm = () => {
         console.log(pair[0] + ': ' + pair[1]);
       }
   
-      const response = await fetch('http://127.0.0.1:8000/forecasting/parameterforward/', {
+      const response = await fetch(`${config.API_URL}/forecasting/parameterforward/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`
@@ -424,7 +425,7 @@ const EventForm = () => {
         formData.append('file', parameterRangesFile);
         formData.append('description', 'Parameter ranges file');
   
-        const response = await fetch('http://127.0.0.1:8000/forecasting/parameterranges/', {
+        const response = await fetch(`${config.API_URL}/forecasting/parameterranges/`, {
           method: 'POST',
           headers: {
             'Authorization': `Token ${authData.token}`
@@ -484,7 +485,7 @@ const EventForm = () => {
   
       console.log('About to send simulation data:', JSON.stringify(simulationData, null, 2));
   
-      const simResponse = await fetch('http://127.0.0.1:8000/forecasting/simulations/', {
+      const simResponse = await fetch(`${config.API_URL}/forecasting/simulations/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`,
@@ -512,7 +513,7 @@ const EventForm = () => {
         psoFormData.append('omega2', psoSettings.omega2);
         psoFormData.append('max_iterations', psoSettings.max_iterations);
       
-        const psoResponse = await fetch('http://127.0.0.1:8000/forecasting/psoparameter/', {
+        const psoResponse = await fetch(`${config.API_URL}/forecasting/psoparameter/`, {
           method: 'POST',
           headers: {
             'Authorization': `Token ${authData.token}`
@@ -533,7 +534,7 @@ const EventForm = () => {
         latinFormData.append('simulation', simData.id);
         latinFormData.append('num_samples', latinSettings.num_samples);
       
-        const latinResponse = await fetch('http://127.0.0.1:8000/forecasting/latinparameter/', {
+        const latinResponse = await fetch(`${config.API_URL}/forecasting/latinparameter/`, {
           method: 'POST',
           headers: {
             'Authorization': `Token ${authData.token}`
@@ -554,7 +555,7 @@ const EventForm = () => {
         monteCarloFormData.append('simulation', simData.id);
         monteCarloFormData.append('num_iterations', monteCarloSettings.num_iterations);
       
-        const monteCarloResponse = await fetch('http://127.0.0.1:8000/forecasting/montecarloparameter/', {
+        const monteCarloResponse = await fetch(`${config.API_URL}/forecasting/montecarloparameter/`, {
           method: 'POST',
           headers: {
             'Authorization': `Token ${authData.token}`
@@ -570,7 +571,7 @@ const EventForm = () => {
         }
       }
   
-      const statusResponse = await fetch(`http://127.0.0.1:8000/forecasting/simulations/${simData.id}/run_simulation/`, {
+      const statusResponse = await fetch(`${config.API_URL}/forecasting/simulations/${simData.id}/run_simulation/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`,

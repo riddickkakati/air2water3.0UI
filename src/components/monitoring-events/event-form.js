@@ -15,6 +15,7 @@ import {
 } from '@material-ui/core';
 import { useAuth } from '../../hooks/useAuth';
 import { useFetchGroup2 } from '../../hooks/fetch-group';
+import config from '../../utils/config';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -104,7 +105,7 @@ const EventForm = () => {
         submitFormData.append('service_key_file', serviceKeyFile);
       }
 
-      const response = await fetch('http://127.0.0.1:8000/monitoring/compute/', {
+      const response = await fetch(`${config.API_URL}/monitoring/compute/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`
@@ -119,7 +120,7 @@ const EventForm = () => {
 
       const data = await response.json();
 
-      const runResponse = await fetch(`http://127.0.0.1:8000/monitoring/compute/${data.id}/run_monitoring/`, {
+      const runResponse = await fetch(`${config.API_URL}/monitoring/compute/${data.id}/run_monitoring/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`

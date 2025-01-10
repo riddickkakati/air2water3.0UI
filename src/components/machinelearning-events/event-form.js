@@ -16,6 +16,7 @@ import {
 } from '@material-ui/core';
 import { useAuth } from '../../hooks/useAuth';
 import { useFetchGroup3 } from '../../hooks/fetch-group';
+import config from '../../utils/config';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -106,7 +107,7 @@ const EventForm = () => {
       // Add group ID
       submitFormData.append('group', group.id);
 
-      const response = await fetch('http://127.0.0.1:8000/machinelearning/ml_analysis/', {
+      const response = await fetch(`${config.API_URL}/machinelearning/ml_analysis/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`
@@ -121,7 +122,7 @@ const EventForm = () => {
       const data = await response.json();
 
       // Start the analysis
-      const runResponse = await fetch(`http://127.0.0.1:8000/machinelearning/ml_analysis/${data.id}/run_analysis/`, {
+      const runResponse = await fetch(`${config.API_URL}/machinelearning/ml_analysis/${data.id}/run_analysis/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${authData.token}`,

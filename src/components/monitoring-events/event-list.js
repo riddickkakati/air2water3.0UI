@@ -14,6 +14,7 @@ import { useAuth } from '../../hooks/useAuth';
 import MapIcon from '@material-ui/icons/Map';
 import GetAppIcon from '@material-ui/icons/GetApp';
 import CloseIcon from '@material-ui/icons/Close';
+import config from '../../utils/config';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -90,7 +91,7 @@ export default function EventList() {
   useEffect(() => {
     const fetchMonitoringRuns = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8000/monitoring/compute/', {
+        const response = await fetch(`${config.API_URL}/monitoring/compute/`, {
           headers: {
             'Authorization': `Token ${authData.token}`
           }
@@ -115,7 +116,7 @@ export default function EventList() {
   const fetchMonitoringStatus = async (monitoringId) => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/monitoring/compute/${monitoringId}/check_status/`,
+        `${config.API_URL}/monitoring/compute/${monitoringId}/check_status/`,
         {
           headers: {
             'Authorization': `Token ${authData.token}`

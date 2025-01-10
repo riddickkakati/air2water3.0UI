@@ -22,6 +22,7 @@ import ErrorIcon from '@material-ui/icons/Error';
 import CloseIcon from '@material-ui/icons/Close';
 import { useAuth } from '../../hooks/useAuth';
 import { checkSimulationStatus3 } from '../../services/event-services';
+import config from '../../utils/config';
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -86,7 +87,7 @@ const EventList = () => {
 
   const fetchMLRuns = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/machinelearning/ml_analysis/', {
+      const response = await fetch(`${config.API_URL}/machinelearning/ml_analysis/`, {
         headers: {
           'Authorization': `Token ${authData.token}`
         }
