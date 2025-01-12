@@ -40,7 +40,6 @@ function MakeGroup2() {
     };
     return (
         <div>
-            <Link to={'/monitoring'}>Back</Link>
             <h1>Create Group</h1>
             <form onSubmit={handleSubmit}>
                 <Grid container spacing={1} alignItems="flex-end">
