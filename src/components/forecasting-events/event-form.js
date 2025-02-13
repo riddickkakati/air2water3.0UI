@@ -644,8 +644,8 @@ const EventForm = () => {
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
         >
-          <FormControlLabel value="W" control={<Radio />} label="Air2water" />
-          <FormControlLabel value="S" control={<Radio />} label="Air2stream" />
+          <FormControlLabel value="W" control={<Radio />} label="Lake" />
+          <FormControlLabel value="S" control={<Radio />} label="Stream" />
         </RadioGroup>
       </FormControl>
       

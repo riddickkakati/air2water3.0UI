@@ -165,7 +165,7 @@ export default function EventList() {
           <div key={simulation.id} className={classes.simulation}>
             <Typography variant="h6" gutterBottom className={classes.simulationTitle}>
               Simulation #{simulation.id}
-              {simulation.model && ` - ${simulation.model === 'W' ? 'Air2water' : 'Air2stream'}`}
+              {simulation.model && ` - ${simulation.model === 'W' ? 'Lake' : 'Stream'}`}
             </Typography>
 
             {results && (
@@ -320,7 +320,7 @@ export default function EventList() {
 
       {simulations.length > 0 && (
         <Typography variant="h6" className={classes.userCount}>
-          There are {userCount} users of air2water3.0 forecast
+          There are {userCount} users of Aqualite Engine 1.0 forecast
         </Typography>
       )}
     </div>

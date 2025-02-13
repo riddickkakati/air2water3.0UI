@@ -224,7 +224,7 @@ const EventList = () => {
                     Analysis #{run.id}
                   </Typography>
                   <Chip 
-                    label={run.model === 'W' ? 'Air2water' : 'Air2stream'}
+                    label={run.model === 'W' ? 'Lake' : 'Stream'}
                     className={classes.modelTypeChip}
                     size="small"
                   />
