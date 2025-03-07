@@ -70,7 +70,7 @@ Before you begin, ensure you have the following installed:
 ## 🏗️ Project Structure
 
 ```
-aqualite-engine-frontend/
+air2water3.0UI/
 ├── public/                  # Public assets
 │   ├── favicon.ico
 │   ├── index.html
